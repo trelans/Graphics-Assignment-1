@@ -1,0 +1,71 @@
+<h1>WebGL - Tessellation and Twist</h1>
+<hr />
+
+<table>
+  <tr>
+    <td style="padding-right: 10px" >
+      <p>
+        <label for="shape">Select a shape</label>
+        <br />
+        <select name="shape" id="shape" style="width: 270px">
+          <option value="3" selected>Triangle</option>
+          <option value="4">Square</option>
+          <option value="5">Pentagon</option>
+          <option value="6">Hexagon</option>
+        </select>
+      </p>
+
+      <p>
+        <label for="tessellation">Tessellation:</label>
+        <input type="text" id="tessellation" readonly style="border:0; color:#f6931f; font-weight:bold;" value="0">
+        <br />
+        <div id="tessellation-slider"></div>
+      </p>
+  
+      <p>
+        <div id="fill" style="width: 100%; text-align: center">
+          <input type="radio" id="fill-radio1" name="fill-radio" checked="checked"><label for="fill-radio1">Solid</label>
+          <input type="radio" id="fill-radio2" name="fill-radio"><label for="fill-radio2">Gasket</label>
+          <input type="radio" id="fill-radio3" name="fill-radio"><label for="fill-radio3">Lines</label>
+          <input type="radio" id="fill-radio4" name="fill-radio"><label for="fill-radio4">Gasket Lines</label>
+
+        </div>
+      </p>
+  
+      <p>
+        <label for="rotation">Rotation:</label>
+        <input type="text" id="rotation" readonly style="border:0; color:#f6931f; font-weight:bold;" value="0°">
+        <div id="rotation-slider"></div>
+      </p>
+      
+      <p>
+        <div id="twist" style="width: 100%; text-align: center">
+          <input type="radio" id="twist-radio1" name="twist-radio" checked="checked"><label for="twist-radio1">Normal</label>
+          <input type="radio" id="twist-radio2" name="twist-radio"><label for="twist-radio2">Twist</label>
+        </div>
+      </p>
+
+    </td>
+    <td>
+      <canvas id="gl-canvas" width="256" height="256" style="border: 2px solid black">
+        Oops ... your browser doesn't support the HTML5 canvas element
+      </canvas>
+    </td>
+  </tr>
+</table>
+
+<script id="vertex-shader" type="x-shader/x-vertex">
+attribute vec2 vPosition;
+
+void main() {
+    gl_Position = vec4(vPosition, 0.0, 1.0);
+}
+</script>
+
+<script id="fragment-shader" type="x-shader/x-fragment">
+precision mediump float;
+
+void main() {
+    gl_FragColor = vec4(0.274, 0.509, 0.705, 1.0);
+}
+</script>
