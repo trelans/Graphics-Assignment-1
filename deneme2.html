@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" >
+<title>PAINT ART 2D</title>
+
+ 
+<script id="vertex-shader" type="x-shader/x-vertex">
+attribute vec4 position;
+        attribute vec4 vColor;
+        varying vec4 fColor;
+        uniform mat4 modelViewMatrix;
+        uniform mat4 projectionMatrix;
+void main() {
+  gl_Position = position;
+  fColor = vColor;
+}
+</script>
+
+<script id="fragment-shader" type="x-shader/x-fragment">
+precision mediump float;
+uniform float size;
+
+varying vec4 fColor;
+
+void main() {
+ 
+    gl_FragColor = fColor;
+                    
+}
+</script>
+
+<script type="text/javascript" src="./Common/webgl-utils.js"></script>
+<script type="text/javascript" src="./Common/initShaders.js"></script>
+<script type="text/javascript" src="./Common/MV.js"></script>
+<script type="text/javascript" src="deneme2.js"></script>
+</head>   
+
+<body>
+<canvas id="gl-canvas" width="1024" height="512">
+Oops ... your browser doesn't support the HTML5 canvas element
+</canvas>
+
+<div id="color-buttons">
+  <button onclick="changeColor('black')">Black</button>
+    <button onclick="changeColor('red')">Red</button>
+    <button onclick="changeColor('green')">Green</button>
+    <button onclick="changeColor('blue')">Blue</button>
+    <button onclick="changeColor('ERASER')">Eraser</button>
+</div>
+
+<div id="undo-button">
+  <button id="undo-button">Undo</button>
+ 
+</div>
+
+<div x>
+<input type="file" id="fileInput" onchange="loadFileData(this)">
+<button onclick="saveDataToFile()">Save Data</button>
+</div>
+
+</body>
+</html>
