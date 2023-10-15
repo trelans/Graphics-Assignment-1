@@ -88,13 +88,16 @@
     <button onclick="changeColor('red')">Red</button>
     <button onclick="changeColor('green')">Green</button>
     <button onclick="changeColor('blue')">Blue</button>
-    <button onclick="changeColor('ERASER')">Eraser</button>
+    <button onclick="eraser()">Eraser</button>
+    <button onclick="brush()">Brush</button>
 </div>
 
-<div id="undo-button">
+<div id="">
     <button id="undo-button">Undo</button>
+    <button onclick="redo()">Redo</button>
+    <button onclick="redo()">Selection Tool</button>
 </div>
-
+ 
 <div>
     <input type="file" id="fileInput" onchange="loadFileData(this)">
     <button onclick="saveDataToFile()">Save Data</button>
