@@ -810,13 +810,12 @@ function redo() {
         const nextVertices = undoHistory.vertexStates[undoHistory.currentIndex];
         const nextColors = undoHistory.colorStates[undoHistory.currentIndex];
 
-        // Update the current state
-        layerVertices[currentLayer].length = 0;
-        layerVertices[currentLayer].push(...nextVertices);
-        layerColors[currentLayer].length = 0;
-        layerColors[currentLayer].push(...nextColors);
+        // Update the current layer's state
+        layerVertices[currentLayer] = nextVertices.slice();
+        layerColors[currentLayer] = nextColors.slice();
 
         fillBuffers();
+        render();
     }
 }
 
@@ -824,19 +823,27 @@ function redo() {
 
 // Function to save the current state to the undo history
 function pushState() {
-    console.log(undoHistory);
+    console.log("undo history", undoHistory);
     if (undoHistory.currentIndex < undoHistory.vertexStates.length - 1) {
+        console.log("redo history", undoHistory)
         // Remove redo history when a new action is performed
         undoHistory.vertexStates.splice(undoHistory.currentIndex + 1);
         undoHistory.colorStates.splice(undoHistory.currentIndex + 1);
     }
 
-    const clonedVertices = layerVertices.slice();
-    const clonedColors = layerColors.slice();
-    console.log(clonedVertices);
+    // Create deep copies of the arrays
+    const clonedVertices = [];
+    const clonedColors = [];
+    for (let i = 0; i < layerVertices.length; i++) {
+        clonedVertices.push([...layerVertices[i]]);
+        clonedColors.push([...layerColors[i]]);
+    }
 
+    console.log("cloned", clonedVertices);
+    console.log("vertex state", undoHistory.vertexStates);
     undoHistory.vertexStates.push(clonedVertices);
     undoHistory.colorStates.push(clonedColors);
+    console.log("vertex state after", undoHistory.vertexStates);
 
     if (undoHistory.vertexStates.length > undoHistory.maxHistoryLength) {
         // Remove the oldest state if the history exceeds the limit
@@ -856,11 +863,12 @@ function undo() {
         const previousVertices = undoHistory.vertexStates[undoHistory.currentIndex];
         const previousColors = undoHistory.colorStates[undoHistory.currentIndex];
 
-        // Update the current state
-        layerVertices = previousVertices;
-        layerColors = previousColors;
+        // Update the current layer's state
+        layerVertices[currentLayer] = previousVertices.slice();
+        layerColors[currentLayer] = previousColors.slice();
 
         fillBuffers();
+        render();
     }
 }
 
