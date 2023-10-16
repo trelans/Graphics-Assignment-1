@@ -899,8 +899,8 @@ function setBrush() {
 }
 function saveDataToFile() {
     const saveData = {
-        vertices: layerVertices[currentLayer],
-        vertexColors: layerColors[currentLayer],
+        vertices: layerVertices,
+        vertexColors: layerColors,
     };
 
     const jsonSaveData = JSON.stringify(saveData);
