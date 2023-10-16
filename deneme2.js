@@ -678,9 +678,13 @@ function increaseLayer(layer) {
         // Swap the layer with the next one
         layerIndexes[index] = layerIndexes[index - 1];
         layerIndexes[index - 1] = layer;
-        console.log(layerIndexes);
+
         updateLayerVerticesZIndex(layer, 2 - (index - 1));
         updateLayerVerticesZIndex(layerIndexes[index], 2 - index);
+        if(currentLayer == layer){
+            selectLayer(layer);
+        }
+        fillBuffers();
         render();
     }
 
@@ -695,16 +699,18 @@ function decreaseLayer(layer) {
         layerIndexes[index + 1] = layer;
         updateLayerVerticesZIndex(layer, 2 - (index + 1));
         updateLayerVerticesZIndex(layerIndexes[index], 2 - index);
+        if(currentLayer == layer){
+            selectLayer(layer);
+        }
+        fillBuffers();
         render();
     }
 }
 
 function updateLayerVerticesZIndex(layer, zIndex) {
-    console.log(layerVertices);
     for (let i = 0; i < layerVertices[layer].length; i += 1) {
         layerVertices[layer][i][2] = zIndex;
     }
-    console.log(layerVertices);
 }
 
 /* UI Elements Functions */
