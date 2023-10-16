@@ -2,7 +2,6 @@ var canvas;
 var gl;
 
 var index = 0;
-var colors2 = [];
 var cBuffer;
 var VBuffer;
 var VPosition;
@@ -12,16 +11,6 @@ var isPainting = false;
 var isErasing = false;
 var program;
 var currentColor = vec4(0.0, 0.0, 0.0, 1.0); // Initial color (black)
-
-var colors = [
-    vec4(0.0, 0.0, 0.0, 1.0),  // black
-    vec4(1.0, 0.0, 0.0, 1.0),  // red
-    vec4(1.0, 1.0, 0.0, 1.0),  // yellow
-    vec4(0.0, 1.0, 0.0, 1.0),  // green
-    vec4(0.0, 0.0, 1.0, 1.0),  // blue
-    vec4(1.0, 0.0, 1.0, 1.0),  // magenta
-    vec4(0.0, 1.0, 1.0, 1.0)   // cyan
-];
 
 let currentLayer = 0; // Initial layer (1)
 let currentLayerOffset = 0; // Initial layer offset (0)
@@ -42,6 +31,7 @@ const layerColors = [
     []
 ];
 
+let isSelectedBefore = false;
 const numRows = 40; // Number of rows
 const numColumns = 40; // Number of columns
 
@@ -76,6 +66,28 @@ let yOffset = 0;
 
 const ZOOM_FACTOR = 0.1; // The zoom sensitivity. Adjust as needed.
 
+var selectedVertices = []; // Store the selected vertices
+var selectionStart = { x: 0, y: 0 };
+var selectionEnd = { x: 0, y: 0 };
+
+var lastSelectionStart = { x: 0, y: 0 };
+var lastSelectionEnd = { x: 0, y: 0 };
+
+var isSelectionOn = false;
+
+
+var rectBuffer;
+var positionLoc;
+var rectVertices = [];
+var canMove = false;
+var brush = true;
+
+var currentVerticesMoveBase = [];
+var selectionRectVertices = [];
+
+var willBeCopiedVertex = [];
+var willBeCopiedColor = [];
+
 window.onload = function init() {
     canvas = document.getElementById("gl-canvas");
 
@@ -89,6 +101,9 @@ window.onload = function init() {
 
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.LEQUAL);
+    gl.depthMask(false);
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
     //
     //  Configure WebGL
@@ -96,7 +111,7 @@ window.onload = function init() {
     gl.viewport(0, 0, canvas.width, canvas.height);
     gl.clearColor(1.0, 1.0, 1.0, 1.0);
 
-    gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
     // Set size value
     const size = gl.getUniformLocation(program, 'size');
@@ -177,28 +192,289 @@ window.onload = function init() {
     gl.enableVertexAttribArray(vColor);
 
 
+    function redrawingCanvas() {
+
+
+
+        // Define rectangle vertices using selectionStart and selectionEnd.
+        rectVertices = [
+            vec3(selectionStart.x, selectionStart.y, 0),
+            vec3(selectionEnd.x, selectionStart.y, 0),
+            vec3(selectionStart.x, selectionEnd.y, 0),
+
+            vec3(selectionEnd.x, selectionStart.y, 0),
+            vec3(selectionEnd.x, selectionEnd.y, 0),
+            vec3(selectionStart.x, selectionEnd.y, 0)
+
+        ];
+
+        colorVertices = [
+            vec4(0.0, 1.0, 0.0, 0.5),
+            vec4(0.0, 1.0, 0.0, 0.5),
+            vec4(0.0, 1.0, 0.0, 0.5),
+
+            vec4(0.0, 1.0, 0.0, 0.5),
+            vec4(0.0, 1.0, 0.0, 0.5),
+            vec4(0.0, 1.0, 0.0, 0.5)
+
+        ];
+        let indexVertices = layerVertices[currentLayer].length - 6;
+        selectionRectVertices = [indexVertices, 6]
+        layerVertices[currentLayer].splice(indexVertices, 6);
+        layerColors[currentLayer].splice(indexVertices, 6);
+
+        layerVertices[currentLayer].push(...rectVertices);
+        layerColors[currentLayer].push(...colorVertices);
+
+
+        fillBuffers();
+        render();
+
+    }
+
+    function redrawCanvas() {
+
+
+        if (isSelectedBefore) {
+            let indexVertices = layerVertices[currentLayer].length - 6;
+            layerVertices[currentLayer].splice(indexVertices, 6);
+            layerColors[currentLayer].splice(indexVertices, 6);
+            fillBuffers();
+            render();
+
+        }
+        isSelectedBefore = true;
+        // Define rectangle vertices using selectionStart and selectionEnd.
+        rectVertices = [
+            vec3(selectionStart.x, selectionStart.y, 0),
+            vec3(selectionEnd.x, selectionStart.y, 0),
+            vec3(selectionStart.x, selectionEnd.y, 0),
+
+            vec3(selectionEnd.x, selectionStart.y, 0),
+            vec3(selectionEnd.x, selectionEnd.y, 0),
+            vec3(selectionStart.x, selectionEnd.y, 0)
+
+        ];
+
+        colorVertices = [
+            vec4(0.0, 1.0, 0.0, 0.5),
+            vec4(0.0, 1.0, 0.0, 0.5),
+            vec4(0.0, 1.0, 0.0, 0.5),
+
+            vec4(0.0, 1.0, 0.0, 0.5),
+            vec4(0.0, 1.0, 0.0, 0.5),
+            vec4(0.0, 1.0, 0.0, 0.5)
+
+        ];
+        layerVertices[currentLayer].push(...rectVertices);
+        layerColors[currentLayer].push(...colorVertices);
+
+        console.log(layerVertices[currentLayer])
+        console.log(layerColors[currentLayer])
+        index = index + 6;
+        fillBuffers();
+        render();
+
+
+    }
+
+
+    // Event listener for Ctrl+C (copy)
+    document.addEventListener("keydown", function (event) {
+        if (event.ctrlKey && event.key === "c") {
+            // Ctrl+C was pressed
+            console.log("Ctrl+C was pressed");
+
+            if (canMove) {
+
+                // Copy
+                for (var i = 0; i < selectedVertices.length - 6; i++) {
+                    var currentIndex = selectedVertices[i];
+                    console.log(currentIndex);
+                    willBeCopiedVertex.push(vec3(layerVertices[currentLayer][currentIndex][0], layerVertices[currentLayer][currentIndex][1], layerVertices[currentLayer][currentIndex][2]));
+                    willBeCopiedColor.push(vec4(layerColors[currentLayer][currentIndex][0], layerColors[currentLayer][currentIndex][1], layerColors[currentLayer][currentIndex][2], layerColors[currentLayer][currentIndex][3]));
+
+
+                }
+
+                console.log(layerVertices[currentLayer]);
+                console.log(willBeCopiedVertex);
+                console.log(willBeCopiedColor);
+            }
+        }
+
+    });
+
+    // Event listener for Ctrl+V (paste)
+    document.addEventListener("keydown", function (event) {
+        if (event.ctrlKey && event.key === "v") {
+            // Ctrl+V was pressed
+            // You can perform your paste logic here
+            console.log("Ctrl+V was pressed");
+
+            if (willBeCopiedVertex.length > 0) {
+                console.log(layerVertices[currentLayer]);
+                console.log(willBeCopiedVertex);
+                layerVertices[currentLayer].push(...willBeCopiedVertex)
+                layerColors[currentLayer].push(...willBeCopiedColor)
+                console.log(layerVertices[currentLayer]);
+                console.log(layerColors[currentLayer]);
+                fillBuffers();
+                render();
+
+            }
+        }
+    });
 
     // Add a mousedown event listener
     canvas.addEventListener("mousedown", function (event) {
         isMouseDown = true;
-        // Start the recursive function
-        drawing();
+
+        if (canMove) {
+
+            var x = event.clientX - canvas.getBoundingClientRect().left;
+            var y = event.clientY - canvas.getBoundingClientRect().top;
+
+
+            x = (2 * x / canvas.width);
+            y = 2 - (2 * y / canvas.height);
+
+
+            selectionStart.x = x;
+            selectionStart.y = y;
+
+            currentVerticesMoveBase = JSON.parse(JSON.stringify(layerVertices[currentLayer]));
+
+            console.log("HERE!!")
+
+            console.log(currentVerticesMoveBase)
+            console.log(layerVertices[currentLayer])
+        }
+
+        else if (isSelectionOn) {
+
+
+            var x = event.clientX - canvas.getBoundingClientRect().left;
+            var y = event.clientY - canvas.getBoundingClientRect().top;
+
+
+            x = (2 * x / canvas.width);
+            y = 2 - (2 * y / canvas.height);
+
+
+            selectionStart.x = x;
+            selectionStart.y = y;
+            selectionEnd.x = x;
+            selectionEnd.y = y;
+            console.log(x + " Xstarts")
+            console.log(y + " Ystarts")
+            selectedVertices = []; // Clear the selected vertices list.
+            redrawCanvas()
+        }
+        else {
+
+            drawing();
+
+        }
     });
+
 
     // Add a mousemove event listener to enable painting while dragging
     canvas.addEventListener("mousemove", function (event) {
         if (isMouseDown) {
-            // Set the flag to indicate painting
-            isPainting = true;
-            drawing();
+
+            if (canMove) {
+
+
+                var x = event.clientX - canvas.getBoundingClientRect().left;
+                var y = event.clientY - canvas.getBoundingClientRect().top;
+
+
+                x = (2 * x / canvas.width);
+                y = 2 - (2 * y / canvas.height);
+
+                console.log(x + " Xstarts")
+                console.log(y + " Ystarts")
+                console.log("X: " + selectionStart.x + "Y: " + selectionStart.y);
+                selectionEnd.x = x;
+                selectionEnd.y = y;
+
+                var deltaMovementX = selectionEnd.x - selectionStart.x;
+                var deltaMovementY = selectionEnd.y - selectionStart.y;
+                console.log("deltaX: " + deltaMovementX + "deltaY: " + deltaMovementY);
+
+                for (var i = 0; i < selectedVertices.length; i++) {
+                    var currentIndex = selectedVertices[i];
+                    layerVertices[currentLayer][currentIndex][0] = currentVerticesMoveBase[currentIndex][0] + deltaMovementX;
+                    layerVertices[currentLayer][currentIndex][1] = currentVerticesMoveBase[currentIndex][1] + deltaMovementY;
+                }
+
+                console.log(layerVertices[currentLayer]);
+                console.log("AA")
+                console.log(currentVerticesMoveBase);
+                fillBuffers();
+                render();
+
+            }
+            else if (isSelectionOn) {
+                var x = event.clientX - canvas.getBoundingClientRect().left;
+                var y = event.clientY - canvas.getBoundingClientRect().top;
+
+
+                x = (2 * x / canvas.width);
+                y = 2 - (2 * y / canvas.height);
+
+
+                selectionEnd.x = x;
+                selectionEnd.y = y;
+                redrawingCanvas();
+
+
+            } else {
+                // Set the flag to indicate painting
+                isPainting = true;
+                drawing();
+
+            }
         }
     });
 
     // Add a mouseup event listener to stop painting when the mouse is released
     canvas.addEventListener("mouseup", function (event) {
         isMouseDown = false;
-        isPainting = false;
-        pushState();
+
+
+        if (isSelectionOn) {
+            console.log(selectionStart.x + " Xend")
+            console.log(selectionStart.y + " Yend")
+            identifySelectedVertices();
+
+            redrawingCanvas()
+            lastSelectionStart = { x: selectionStart.x, y: selectionStart.y }
+            lastSelectionEnd = { x: selectionEnd.x, y: selectionEnd.y }
+            selectionStart = { x: 0, y: 0 };
+            selectionEnd = { x: 0, y: 0 };
+
+            canMove = true;
+            isSelectionOn = false;
+            console.log("CANMOVE TRUE")
+
+        } else if (canMove) {
+
+            var x = event.clientX - canvas.getBoundingClientRect().left;
+            var y = event.clientY - canvas.getBoundingClientRect().top;
+
+
+            x = (2 * x / canvas.width);
+            y = 2 - (2 * y / canvas.height);
+            if ((x >= lastSelectionStart.x || x <= lastSelectionEnd.x) || (y <= lastSelectionStart.y || y >= lastSelectionEnd.y)) {
+                deSelect();
+            }
+        }
+        else {
+            pushState();
+            isPainting = false;
+        }
     });
 
     canvas.addEventListener("mouseout", function (event) {
@@ -234,7 +510,6 @@ function fillBuffers() {
     let layerOffset = 0;
 
     for (var i = layerIndexes.length - 1; i >= 0; i--) {
-        console.log("layer rendering order" + layerVertices[layerIndexes[i]]);
         for (var j = 0; j < layerVertices[layerIndexes[i]].length; j++) {
             var offsetVertex = j * 12;
             var offsetColor = j * 16;
@@ -253,22 +528,9 @@ function fillBuffers() {
 
 function render() {
 
-    gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.drawArrays(gl.TRIANGLES, 0, index);
 
-}
-
-// TODO - Not called anywhere, may be removed
-function updateBuffers() {
-    // Updating vertex color buffer
-    gl.bindBuffer(gl.ARRAY_BUFFER, cBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, flatten(currentColors), gl.STATIC_DRAW);
-
-    // Updating vertex position buffer
-    gl.bindBuffer(gl.ARRAY_BUFFER, VBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, flatten(currentVertices), gl.STATIC_DRAW);
-
-    render();
 }
 
 function manageZoomAndPan(canvas) {
@@ -452,7 +714,7 @@ function drawing() {
                     render();
 
                 } else {
-                    console.log("dynamicVertices[0] not found in currentVertices");
+                    console.log("dynamicVertices[0] not found in layerVertices[currentLayer]");
                 }
 
 
@@ -520,10 +782,10 @@ function redo() {
         const nextColors = undoHistory.colorStates[undoHistory.currentIndex];
 
         // Update the current state
-        currentVertices.length = 0;
-        currentVertices.push(...nextVertices);
-        currentColors.length = 0;
-        currentColors.push(...nextColors);
+        layerVertices[currentLayer].length = 0;
+        layerVertices[currentLayer].push(...nextVertices);
+        layerColors[currentLayer].length = 0;
+        layerColors[currentLayer].push(...nextColors);
 
         fillBuffers();
     }
@@ -539,8 +801,8 @@ function pushState() {
         undoHistory.colorStates.splice(undoHistory.currentIndex + 1);
     }
 
-    const clonedVertices = currentVertices.slice();
-    const clonedColors = currentColors.slice();
+    const clonedVertices = layerVertices[currentLayer].slice();
+    const clonedColors = layerColors[currentLayer].slice();
 
     undoHistory.vertexStates.push(clonedVertices);
     undoHistory.colorStates.push(clonedColors);
@@ -564,10 +826,10 @@ function undo() {
         const previousColors = undoHistory.colorStates[undoHistory.currentIndex];
 
         // Update the current state
-        currentVertices.length = 0;
-        currentVertices.push(...previousVertices);
-        currentColors.length = 0;
-        currentColors.push(...previousColors);
+        layerVertices[currentLayer].length = 0;
+        layerVertices[currentLayer].push(...previousVertices);
+        layerColors[currentLayer].length = 0;
+        layerColors[currentLayer].push(...previousColors);
 
         fillBuffers();
     }
@@ -575,16 +837,20 @@ function undo() {
 
 function eraser() {
     isErasing = true;
-
+    isSelectionOn = false;
+    brush = false;
+    canMove = false;
 }
-function brush() {
+function setBrush() {
     isErasing = false;
-
+    isSelectionOn = false;
+    canMove = false;
+    brush = true;
 }
 function saveDataToFile() {
     const saveData = {
-        vertices: currentVertices,
-        vertexColors: currentColors,
+        vertices: layerVertices[currentLayer],
+        vertexColors: layerColors[currentLayer],
     };
 
     const jsonSaveData = JSON.stringify(saveData);
@@ -627,10 +893,10 @@ function loadFileData(inputFile) {
 
             // Update WebGL buffers with the loaded data
             gl.bindBuffer(gl.ARRAY_BUFFER, VBuffer);
-            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(currentVertices), gl.STATIC_DRAW);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(layerVertices[currentLayer]), gl.STATIC_DRAW);
 
             gl.bindBuffer(gl.ARRAY_BUFFER, cBuffer);
-            gl.bufferData(gl.ARRAY_BUFFER, flatten(currentColors), gl.STATIC_DRAW);
+            gl.bufferData(gl.ARRAY_BUFFER, flatten(layerColors[currentLayer]), gl.STATIC_DRAW);
 
             render(); // Redraw the canvas with the loaded data
         };
@@ -647,18 +913,72 @@ function identifySelectedVertices() {
     var minY = Math.min(selectionStart.y, selectionEnd.y);
     var maxY = Math.max(selectionStart.y, selectionEnd.y);
 
-    for (var i = 0; i < vertices.length; i += 3) {
-        var x = vertices[i];
-        var y = vertices[i + 1];
+    for (var i = 0; i < layerVertices[currentLayer].length; i += 1) {
+        var x = layerVertices[currentLayer][i][0];
+        var y = layerVertices[currentLayer][i][1];
 
         if (x >= minX && x <= maxX && y >= minY && y <= maxY) {
-            selectedVertices.push(i / 3); // Store the index of the selected vertex.
+            selectedVertices.push(i); // Store the index of the selected vertex.
         }
     }
-
+    console.log("Selected verticies are : ")
+    console.log(selectedVertices);
+    console.log("All verticies are : ")
+    console.log(layerVertices[currentLayer]);
+    selectedVertices = generateSelectedArray(selectedVertices);
     // Now you have the indices of the selected vertices in the selectedVertices array.
     // You can use this information to move the selected triangles as needed.
 }
+
+function selectionOn() {
+    console.log("here");
+    isSelectionOn = true;
+
+
+
+}
+
+
+function deSelect() {
+
+    selectedVertices = [];
+    layerVertices[currentLayer].splice(selectionRectVertices[0], selectionRectVertices[1]);
+    layerColors[currentLayer].splice(selectionRectVertices[0], selectionRectVertices[1]);
+
+    fillBuffers();
+    render();
+
+    setbrush();
+}
+
+
+function generateSelectedArray(inputArray) {
+    // Initialize an empty result array
+    const resultArray = [];
+
+
+    for (let j = 0; j < inputArray.length - 6; j++) {
+        // Calculate the quotient when dividing by 3
+        const quotient = Math.floor(inputArray[j] / 3);
+
+        // Iterate to generate the sequence based on the quotient
+        for (let i = 0; i < 3; i++) {
+            const generatedNumber = quotient * 3 + i;
+
+            // Check if the generated number is not already in the result array
+            if (!resultArray.includes(generatedNumber)) {
+                resultArray.push(generatedNumber);
+            }
+        }
+    }
+
+    for (let j = inputArray.length - 6; j < inputArray.length; j++) {
+        resultArray.push(inputArray[j]);
+    }
+
+    return resultArray;
+}
+
 
 function selectLayer(layer) {
     currentLayer = layer;
@@ -684,7 +1004,7 @@ function increaseLayer(layer) {
 
         updateLayerVerticesZIndex(layer, 2 - (index - 1));
         updateLayerVerticesZIndex(layerIndexes[index], 2 - index);
-        if(currentLayer == layer){
+        if (currentLayer == layer) {
             selectLayer(layer);
         }
         fillBuffers();
@@ -702,7 +1022,7 @@ function decreaseLayer(layer) {
         layerIndexes[index + 1] = layer;
         updateLayerVerticesZIndex(layer, 2 - (index + 1));
         updateLayerVerticesZIndex(layerIndexes[index], 2 - index);
-        if(currentLayer == layer){
+        if (currentLayer == layer) {
             selectLayer(layer);
         }
         fillBuffers();
@@ -780,8 +1100,10 @@ function selectTool(element, tool) {
     element.classList.add('selectedTool');
 
     if (tool == "brush") {
-        brush();
+        setBrush();
     } else if (tool == "eraser") {
         eraser();
+    } else if (tool == "selection") {
+        selectionOn();
     }
 }
