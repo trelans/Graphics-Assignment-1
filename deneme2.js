@@ -11,6 +11,7 @@ var isPainting = false;
 var isErasing = false;
 var program;
 var currentColor = vec4(0.0, 0.0, 0.0, 1.0); // Initial color (black)
+var zoomEnabled = false;
 
 let currentLayer = 0; // Initial layer (1)
 let currentLayerOffset = 0; // Initial layer offset (0)
@@ -116,7 +117,7 @@ window.onload = function init() {
     // Set size value
     const size = gl.getUniformLocation(program, 'size');
     gl.uniform1f(size, 0.1); // Cube Size
-    //manageZoomAndPan(canvas);
+    manageZoomAndPan(canvas);
     // Orthographic Projection
     const left = 0;
     const right = 2;
@@ -371,10 +372,16 @@ window.onload = function init() {
             selectedVertices = []; // Clear the selected vertices list.
             redrawCanvas()
         }
-        else {
+        else if(brush) {
 
             drawing();
 
+        }
+        else if(zoomEnabled) {
+            console.log("mousedown event fired kutay");
+            isDragging = true;
+            lastX = event.clientX;
+            lastY = event.clientY;
         }
     });
 
@@ -430,11 +437,25 @@ window.onload = function init() {
                 redrawingCanvas();
 
 
-            } else {
+            } else if(brush)  {
                 // Set the flag to indicate painting
                 isPainting = true;
                 drawing();
 
+            } else if(zoomEnabled) {
+                if (isDragging) {
+                    let dx = event.clientX - lastX;
+                    let dy = event.clientY - lastY;
+        
+                    // Adjust the offsets based on the mouse drag
+                    xOffset -= dx / canvas.width * zoomScale;
+                    yOffset += dy / canvas.height * zoomScale;
+        
+                    updateProjection();
+        
+                    lastX = event.clientX;
+                    lastY = event.clientY;
+                }
             }
         }
     });
@@ -471,7 +492,7 @@ window.onload = function init() {
                 deSelect();
             }
         }
-        else {
+        else if (brush)  {
             pushState();
             isPainting = false;
         }
@@ -534,37 +555,44 @@ function render() {
 }
 
 function manageZoomAndPan(canvas) {
-    canvas.onmousedown = function (event) {
-        isDragging = true;
-        lastX = event.clientX;
-        lastY = event.clientY;
-    }
 
-    canvas.onmouseup = function (event) {
-        isDragging = false;
-    }
-
-    canvas.onmousemove = function (event) {
-        if (isDragging) {
-            let dx = event.clientX - lastX;
-            let dy = event.clientY - lastY;
-
-            // Adjust the offsets based on the mouse drag
-            xOffset -= dx / canvas.width * zoomScale;
-            yOffset += dy / canvas.height * zoomScale;
-
-            updateProjection();
-
+    if (zoomEnabled) {
+        canvas.onmousedown = function (event) {
+            console.log("mousedown event fired kutay");
+            isDragging = true;
             lastX = event.clientX;
             lastY = event.clientY;
         }
-    }
-
-    canvas.onwheel = function (event) {
-        // Adjust the zoom scale based on the mouse wheel movement
-        zoomScale *= (event.deltaY > 0) ? 1 + ZOOM_FACTOR : 1 - ZOOM_FACTOR;
-
-        updateProjection();
+    
+        canvas.onmouseup = function (event) {
+            console.log("mouseup event fired kutay");
+            isDragging = false;
+        }
+    
+        canvas.onmousemove = function (event) {
+            console.log("mousemove event fired kutay");
+            if (isDragging) {
+                let dx = event.clientX - lastX;
+                let dy = event.clientY - lastY;
+    
+                // Adjust the offsets based on the mouse drag
+                xOffset -= dx / canvas.width * zoomScale;
+                yOffset += dy / canvas.height * zoomScale;
+    
+                updateProjection();
+    
+                lastX = event.clientX;
+                lastY = event.clientY;
+            }
+        }
+    
+        canvas.onwheel = function (event) {
+            console.log("wheel event fired kutay");
+            // Adjust the zoom scale based on the mouse wheel movement
+            zoomScale *= (event.deltaY > 0) ? 1 + ZOOM_FACTOR : 1 - ZOOM_FACTOR;
+    
+            updateProjection();
+        }
     }
 }
 
@@ -1036,6 +1064,26 @@ function updateLayerVerticesZIndex(layer, zIndex) {
     }
 }
 
+function hand() {
+    console.log("hand");
+    isErasing = false;
+    isSelectionOn = false;
+    brush = false;
+    canMove = false;
+    zoomEnabled = true;
+}
+
+function zoomIn() {
+    zoomScale *= (1 + ZOOM_FACTOR);
+    updateProjection();
+}
+
+function zoomOut() {
+    zoomScale *= (1 - ZOOM_FACTOR);
+    updateProjection();
+}
+
+
 /* UI Elements Functions */
 
 // Function to change the color and set the selectedColor class
@@ -1105,5 +1153,11 @@ function selectTool(element, tool) {
         eraser();
     } else if (tool == "selection") {
         selectionOn();
+    } else if (tool == "zoom-in") {
+        zoomIn();
+    } else if (tool == "zoom-out") {
+        zoomOut();
+    } else if (tool == "hand") {
+        hand();
     }
 }
