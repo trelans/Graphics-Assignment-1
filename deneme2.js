@@ -82,7 +82,7 @@ window.onload = function init() {
     const projectionMatrix = ortho(left, right, bottom, top, near, far);
     const u_ProjectionMatrix = gl.getUniformLocation(program, 'projectionMatrix');
     gl.uniformMatrix4fv(u_ProjectionMatrix, false, flatten(projectionMatrix));
-  for (let m = 0; m < numRows * numColumns; m++) {
+    for (let m = 0; m < numRows * numColumns; m++) {
         for (let l = 0; l < 4; l++) {
             for (let k = 0; k < 3; k++) {
                 const color = vec4(0.0, 1.0, 1.0, 1.0);
@@ -195,22 +195,20 @@ function render() {
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.drawArrays(gl.TRIANGLES, 0, vertices.length / 3);
 
-    window.requestAnimFrame(render);
-
 }
 
 function manageZoomAndPan(canvas) {
-    canvas.onmousedown = function(event) {
+    canvas.onmousedown = function (event) {
         isDragging = true;
         lastX = event.clientX;
         lastY = event.clientY;
     }
 
-    canvas.onmouseup = function(event) {
+    canvas.onmouseup = function (event) {
         isDragging = false;
     }
 
-    canvas.onmousemove = function(event) {
+    canvas.onmousemove = function (event) {
         if (isDragging) {
             let dx = event.clientX - lastX;
             let dy = event.clientY - lastY;
@@ -226,7 +224,7 @@ function manageZoomAndPan(canvas) {
         }
     }
 
-    canvas.onwheel = function(event) {
+    canvas.onwheel = function (event) {
         // Adjust the zoom scale based on the mouse wheel movement
         zoomScale *= (event.deltaY > 0) ? 1 + ZOOM_FACTOR : 1 - ZOOM_FACTOR;
 
@@ -243,7 +241,7 @@ function updateProjection() {
     const projectionMatrix = ortho(left, right, bottom, top, -1, 1);
     const u_ProjectionMatrix = gl.getUniformLocation(program, 'projectionMatrix');
     gl.uniformMatrix4fv(u_ProjectionMatrix, false, flatten(projectionMatrix));
-    
+
     // Render function to redraw your scene with the updated projection
     render();
 }
@@ -258,7 +256,7 @@ function drawing() {
         var y = event.clientY - canvas.getBoundingClientRect().top;
 
         // Convert mouse coordinates to WebGL coordinates (-1 to 1)
-        x = (2 * x / canvas.width) ;
+        x = (2 * x / canvas.width);
         y = 2 - (2 * y / canvas.height);
 
 
@@ -425,6 +423,13 @@ function undo() {
     }
 }
 
+function eraser() {
+    isErasing = true;
+}
+function brush() {
+    isErasing = false;
+}
+
 function saveDataToFile() {
     const saveData = {
         vertices: vertices,
@@ -480,5 +485,68 @@ function loadFileData(inputFile) {
         };
 
         reader.readAsText(file);
+    }
+}
+
+
+/* UI Elements Functions */
+
+// Function to change the color and set the selectedColor class
+function changeColorUI(element, color) {
+    // Remove selectedColor class from all clickableColor elements
+    const clickableColors = document.querySelectorAll('.clickableColor');
+    clickableColors.forEach((clickableColor) => {
+        clickableColor.classList.remove('selectedColor');
+    });
+
+    // Add selectedColor class to the clicked color element
+    element.classList.add('selectedColor');
+    changeColor(color);
+}
+
+// Function to move a layer up or down
+function moveLayer(direction, element) {
+    const listItem = element.closest('.layer');
+    const list = listItem.parentElement;
+
+    if (direction === 'up' && listItem.previousElementSibling) {
+        list.insertBefore(listItem, listItem.previousElementSibling);
+    } else if (direction === 'down' && listItem.nextElementSibling) {
+        list.insertBefore(listItem.nextElementSibling, listItem);
+    }
+}
+
+// Function to select a layer and deselect the previously selected one
+function selectLayer(layer) {
+    const layerList = document.querySelectorAll('.layer');
+
+    // Deselect all layers
+    layerList.forEach((item) => {
+        item.classList.remove('selectedLayer');
+    });
+
+    // Add 'selectedLayer' class to the closest li element (parent)
+    const closestLi = layer.closest('li');
+    if (closestLi) {
+        closestLi.classList.add('selectedLayer');
+    }
+}
+
+// Function to select a tool and deselect the previously selected one
+function selectTool(element, tool) {
+    const toolList = document.querySelectorAll('.clickable.selectedTool');
+    
+    // Deselect all tools
+    toolList.forEach((item) => {
+        item.classList.remove('selectedTool');
+    });
+
+    // Select the clicked tool
+    element.classList.add('selectedTool');
+
+    if (tool == "brush") {
+        brush();
+    } else if (tool == "eraser") {
+        eraser();
     }
 }

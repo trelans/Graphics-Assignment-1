@@ -1,55 +1,9 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <meta http-equiv="Content-Type" content="text/html;charset=utf-8">
     <title>PAINT ART 2D</title>
-
-    <style>
-        body {
-            text-align: center;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            background-color: #f0f0f0;
-        }
-
-        #gl-canvas {
-            border: 2px solid #000;
-        }
-
-        #color-buttons {
-            margin-top: 20px;
-        }
-
-        #color-buttons button {
-            margin: 5px;
-        }
-
-        #undo-button {
-            margin-top: 20px;
-        }
-
-        #fileInput {
-            display: none;
-        }
-
-        #fileInput + button {
-            cursor: pointer;
-            background-color: #0074d9;
-            color: #fff;
-            border: none;
-            padding: 10px 15px;
-            border-radius: 4px;
-        }
-
-        #fileInput + button:hover {
-            background-color: #0056b3;
-        }
-    </style>
 
     <script id="vertex-shader" type="x-shader/x-vertex">
         attribute vec4 position;
@@ -76,28 +30,130 @@
     <script type="text/javascript" src="./Common/initShaders.js"></script>
     <script type="text/javascript" src="./Common/MV.js"></script>
     <script type="text/javascript" src="deneme2.js"></script>
+    <link rel="stylesheet" href="./styles/css/bootstrap.min.css">
+    <link rel="stylesheet" href="./styles/custom.css">
 </head>
 
 <body>
-<canvas id="gl-canvas" width="900" height="900">
-    Oops ... your browser doesn't support the HTML5 canvas element
-</canvas>
-
-<div id="color-buttons">
-    <button onclick="changeColor('black')">Black</button>
-    <button onclick="changeColor('red')">Red</button>
-    <button onclick="changeColor('green')">Green</button>
-    <button onclick="changeColor('blue')">Blue</button>
-    <button onclick="changeColor('ERASER')">Eraser</button>
-</div>
-
-<div id="undo-button">
-    <button id="undo-button">Undo</button>
-</div>
-
-<div>
-    <input type="file" id="fileInput" onchange="loadFileData(this)">
-    <button onclick="saveDataToFile()">Save Data</button>
-</div>
+    <div class="container-fluid h-100" style="background-color: #000;">
+        <div class="row h-100 content">
+            <div class="col-1 sidebar left-sidebar" style="background-color: #1f1f1f;">
+                <div>
+                    <h3>Tools</h3>
+                </div>
+                <div class="sidebar-content">
+                    <div class="col-12">
+                        <img src="./images/brush.svg" class="w-25 clickable selectedTool" title="brush"
+                            onclick="selectTool(this, 'brush')" />
+                    </div>
+                    <div class="col-12">
+                        <img src="./images/eraser.svg" class="w-25 clickable" title="eraser"
+                            onclick="selectTool(this, 'eraser')" />
+                    </div>
+                    <div class="col-12">
+                        <img src="./images/zoom-in.svg" class="w-25 clickable" title="zoom-in"
+                            onclick="selectTool(this)" />
+                    </div>
+                    <div class="col-12">
+                        <img src="./images/zoom-out.svg" class="w-25 clickable" title="zoom-out"
+                            onclick="selectTool(this)" />
+                    </div>
+                    <div class="col-12">
+                        <img src="./images/hand.svg" class="w-25 clickable" title="hand" onclick="selectTool(this)" />
+                    </div>
+                    <div class="col-12">
+                        <img src="./images/rect-select.svg" class="w-25 clickable" title="rectangular selection"
+                            onclick="selectTool(this)" />
+                    </div>
+                </div>
+                <div>
+                    <div class="col-12">
+                        <img src="./images/undo.svg" class="w-25 clickable" title="undo" id="undo-button" />
+                        <img src="./images/redo.svg" class="w-25 clickable" title="redo" id="redo-button" onclick="redo()" />
+                    </div>
+                </div>
+            </div>
+            <div class="col-10 canvas-container">
+                <canvas id="gl-canvas" width="900" height="900">
+                    Oops ... your browser doesn't support the HTML5 canvas element
+                </canvas>
+            </div>
+            <div class="col-2 sidebar right-sidebar" style="background-color: #1f1f1f;">
+                <div class="grid-wrapper">
+                    <h5>Colors</h5>
+                    <div class="color-grid">
+                        <div class="color clickableColor selectedColor" style="background-color: black"
+                            onclick="changeColorUI(this, 'black')"></div>
+                        <div class="color clickableColor" style="background-color: red"
+                            onclick="changeColorUI(this, 'red')"></div>
+                        <div class="color clickableColor" style="background-color: green"
+                            onclick="changeColorUI(this, 'green')"></div>
+                        <div class="color clickableColor" style="background-color: blue"
+                            onclick="changeColorUI(this, 'blue')"></div>
+                        <div class="color clickableColor"></div>
+                        <div class="color clickableColor"></div>
+                        <div class="color clickableColor"></div>
+                        <div class="color clickableColor"></div>
+                        <div class="color clickableColor"></div>
+                        <div class="color clickableColor"></div>
+                        <div class="color clickableColor"></div>
+                        <div class="color clickableColor"></div>
+                        <div class="color clickableColor"></div>
+                        <div class="color clickableColor"></div>
+                        <div class="color clickableColor"></div>
+                    </div>
+                </div>
+                <div>
+                    <h5>Layers</h5>
+                    <ul class="layer-list">
+                        <li class="layer clickableLayer selectedLayer" id="layer1">
+                            <span class="col-8" style="font-size: larger;" onclick="selectLayer(this)">Layer 1</span>
+                            <div class="col-4 layer-buttons">
+                                <img src="./images/up.svg" class="w-50 clickable" title="Increase Layer"
+                                    onclick="moveLayer('up', this)" />
+                                <img src="./images/down.svg" class="w-50 clickable" title="Decrease Layer Order"
+                                    onclick="moveLayer('down', this)" />
+                            </div>
+                        </li>
+                        <li class="layer clickableLayer" id="layer2">
+                            <span class="col-8" style="font-size: larger;" onclick="selectLayer(this)">Layer 2</span>
+                            <div class="col-4 layer-buttons">
+                                <img src="./images/up.svg" class="w-50 clickable" title="Increase Layer"
+                                    onclick="moveLayer('up', this)" />
+                                <img src="./images/down.svg" class="w-50 clickable" title="Decrease Layer Order"
+                                    onclick="moveLayer('down', this)" />
+                            </div>
+                        </li>
+                        <li class="layer clickableLayer" id="layer3">
+                            <span class="col-8" style="font-size: larger;" onclick="selectLayer(this)">Layer 3</span>
+                            <div class="col-4 layer-buttons">
+                                <img src="./images/up.svg" class="w-50 clickable" title="Increase Layer"
+                                    onclick="moveLayer('up', this)" />
+                                <img src="./images/down.svg" class="w-50 clickable" title="Decrease Layer Order"
+                                    onclick="moveLayer('down', this)" />
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+                <div class="ls-section">
+                    <h5>Load / Save</h5>
+                    <div class="lsButtons">
+                        <div class="">
+                            <btn class="btn btn-primary">
+                                <label for="fileInput" style="cursor: pointer;">
+                                    Load Data
+                                </label>
+                                <input type="file" id="fileInput" onchange="loadFileData(this)"></input>
+                            </btn>
+                        </div>
+                        <div>
+                            <button class="btn btn-primary" onclick="saveDataToFile()">Save Data</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
+
 </html>
