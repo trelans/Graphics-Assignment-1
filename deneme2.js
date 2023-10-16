@@ -20,13 +20,13 @@ let currentLayerZIndex = 2; // Initial layer Z index (2)
 const layerIndexes = [0, 1, 2];
 const layerSizes = [0, 0, 0];
 
-const layerVertices = [
+let layerVertices = [
     [],
     [],
     []
 ];
 
-const layerColors = [
+let layerColors = [
     [],
     [],
     []
@@ -61,7 +61,7 @@ let isDragging = false;
 let lastX = 0;
 let lastY = 0;
 
-let zoomScale = 1;
+let zoomScale = 2;
 let xOffset = 0;
 let yOffset = 0;
 
@@ -88,6 +88,13 @@ var selectionRectVertices = [];
 
 var willBeCopiedVertex = [];
 var willBeCopiedColor = [];
+
+let left = 0;
+let right = 2;
+let bottom = 0;
+let top1 = 2;
+let near = -10; // TODO - Adjust as needed
+let far = 10; // TODO - Adjust as needed
 
 window.onload = function init() {
     canvas = document.getElementById("gl-canvas");
@@ -118,13 +125,8 @@ window.onload = function init() {
     gl.uniform1f(size, 0.1); // Cube Size
     manageZoomAndPan(canvas);
     // Orthographic Projection
-    const left = 0;
-    const right = 2;
-    const bottom = 0;
-    const top = 2;
-    const near = -10; // TODO - Adjust as needed
-    const far = 10; // TODO - Adjust as needed
-    const projectionMatrix = ortho(left, right, bottom, top, near, far);
+
+    const projectionMatrix = ortho(left, right, bottom, top1, near, far);
     const u_ProjectionMatrix = gl.getUniformLocation(program, 'projectionMatrix');
     gl.uniformMatrix4fv(u_ProjectionMatrix, false, flatten(projectionMatrix));
 
@@ -371,12 +373,12 @@ window.onload = function init() {
             selectedVertices = []; // Clear the selected vertices list.
             redrawCanvas()
         }
-        else if(brush) {
+        else if (brush) {
 
             drawing();
 
         }
-        else if(zoomEnabled) {
+        else if (zoomEnabled) {
             console.log("mousedown event fired kutay");
             isDragging = true;
             lastX = event.clientX;
@@ -436,22 +438,22 @@ window.onload = function init() {
                 redrawingCanvas();
 
 
-            } else if(brush)  {
+            } else if (brush) {
                 // Set the flag to indicate painting
                 isPainting = true;
                 drawing();
 
-            } else if(zoomEnabled) {
+            } else if (zoomEnabled) {
                 if (isDragging) {
                     let dx = event.clientX - lastX;
                     let dy = event.clientY - lastY;
-        
+
                     // Adjust the offsets based on the mouse drag
                     xOffset -= dx / canvas.width * zoomScale;
                     yOffset += dy / canvas.height * zoomScale;
-        
+
                     updateProjection();
-        
+
                     lastX = event.clientX;
                     lastY = event.clientY;
                 }
@@ -491,7 +493,7 @@ window.onload = function init() {
                 deSelect();
             }
         }
-        else if (brush)  {
+        else if (brush) {
             pushState();
             isPainting = false;
         }
@@ -562,46 +564,46 @@ function manageZoomAndPan(canvas) {
             lastX = event.clientX;
             lastY = event.clientY;
         }
-    
+
         canvas.onmouseup = function (event) {
             console.log("mouseup event fired kutay");
             isDragging = false;
         }
-    
+
         canvas.onmousemove = function (event) {
             console.log("mousemove event fired kutay");
             if (isDragging) {
                 let dx = event.clientX - lastX;
                 let dy = event.clientY - lastY;
-    
+
                 // Adjust the offsets based on the mouse drag
                 xOffset -= dx / canvas.width * zoomScale;
                 yOffset += dy / canvas.height * zoomScale;
-    
+
                 updateProjection();
-    
+
                 lastX = event.clientX;
                 lastY = event.clientY;
             }
         }
-    
+
         canvas.onwheel = function (event) {
             console.log("wheel event fired kutay");
             // Adjust the zoom scale based on the mouse wheel movement
             zoomScale *= (event.deltaY > 0) ? 1 + ZOOM_FACTOR : 1 - ZOOM_FACTOR;
-    
+
             updateProjection();
         }
     }
 }
 
 function updateProjection() {
-    const left = -zoomScale + xOffset;
-    const right = zoomScale + xOffset;
-    const bottom = -zoomScale + yOffset;
-    const top = zoomScale + yOffset;
+    left = 0 + xOffset;
+    right = 2 + xOffset;
+    bottom = 0 + yOffset;
+    top1 = 2 + yOffset;
 
-    const projectionMatrix = ortho(left, right, bottom, top, -1, 1);
+    const projectionMatrix = ortho(left, right, bottom, top1, near, far);
     const u_ProjectionMatrix = gl.getUniformLocation(program, 'projectionMatrix');
     gl.uniformMatrix4fv(u_ProjectionMatrix, false, flatten(projectionMatrix));
 
@@ -822,14 +824,16 @@ function redo() {
 
 // Function to save the current state to the undo history
 function pushState() {
+    console.log(undoHistory);
     if (undoHistory.currentIndex < undoHistory.vertexStates.length - 1) {
         // Remove redo history when a new action is performed
         undoHistory.vertexStates.splice(undoHistory.currentIndex + 1);
         undoHistory.colorStates.splice(undoHistory.currentIndex + 1);
     }
 
-    const clonedVertices = layerVertices[currentLayer].slice();
-    const clonedColors = layerColors[currentLayer].slice();
+    const clonedVertices = layerVertices.slice();
+    const clonedColors = layerColors.slice();
+    console.log(clonedVertices);
 
     undoHistory.vertexStates.push(clonedVertices);
     undoHistory.colorStates.push(clonedColors);
@@ -853,10 +857,8 @@ function undo() {
         const previousColors = undoHistory.colorStates[undoHistory.currentIndex];
 
         // Update the current state
-        layerVertices[currentLayer].length = 0;
-        layerVertices[currentLayer].push(...previousVertices);
-        layerColors[currentLayer].length = 0;
-        layerColors[currentLayer].push(...previousColors);
+        layerVertices = previousVertices;
+        layerColors = previousColors;
 
         fillBuffers();
     }
@@ -873,6 +875,15 @@ function setBrush() {
     isSelectionOn = false;
     canMove = false;
     brush = true;
+    left = 0;
+    right = 2;
+    bottom = 0;
+    top1 = 2;
+    near = -10; // TODO - Adjust as needed
+    far = 10; // TODO - Adjust as needed
+    xOffset = 0;
+    yOffset = 0;
+    updateProjection();
 }
 function saveDataToFile() {
     const saveData = {
