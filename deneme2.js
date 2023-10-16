@@ -61,7 +61,7 @@ let isDragging = false;
 let lastX = 0;
 let lastY = 0;
 
-let zoomScale = 1;
+let zoomScale = 2;
 let xOffset = 0;
 let yOffset = 0;
 
@@ -95,9 +95,6 @@ let bottom = 0;
 let top1 = 2;
 let near = -10; // TODO - Adjust as needed
 let far = 10; // TODO - Adjust as needed
-
-let zoomInEnabled = false;
-let zoomOutEnabled = false;
 
 window.onload = function init() {
     canvas = document.getElementById("gl-canvas");
@@ -381,7 +378,7 @@ window.onload = function init() {
             drawing();
 
         }
-        else if (zoomEnabled || zoomInEnabled || zoomOutEnabled) {
+        else if (zoomEnabled) {
             console.log("mousedown event fired kutay");
             isDragging = true;
             lastX = event.clientX;
@@ -446,7 +443,7 @@ window.onload = function init() {
                 isPainting = true;
                 drawing();
 
-            } else if (zoomEnabled || zoomInEnabled || zoomOutEnabled) {
+            } else if (zoomEnabled) {
                 if (isDragging) {
                     let dx = event.clientX - lastX;
                     let dy = event.clientY - lastY;
@@ -499,14 +496,6 @@ window.onload = function init() {
         else if (brush) {
             pushState();
             isPainting = false;
-        }
-        else if (zoomInEnabled) {
-               zoomScale *= (1 - ZOOM_FACTOR);
-                updateProjection();
-        }
-        else if (zoomOutEnabled) {
-                zoomScale *= (1 + ZOOM_FACTOR);
-                updateProjection();
         }
     });
 
@@ -609,10 +598,10 @@ function manageZoomAndPan(canvas) {
 }
 
 function updateProjection() {
-    left = (0 + xOffset) * zoomScale;
-    right = (2 + xOffset) * zoomScale;
-    bottom = (0 + yOffset) * zoomScale;
-    top1 = (2 + yOffset) * zoomScale;
+    left = 0 + xOffset;
+    right = 2 + xOffset;
+    bottom = 0 + yOffset;
+    top1 = 2 + yOffset;
 
     const projectionMatrix = ortho(left, right, bottom, top1, near, far);
     const u_ProjectionMatrix = gl.getUniformLocation(program, 'projectionMatrix');
@@ -890,12 +879,19 @@ function eraser() {
     canMove = false;
 }
 function setBrush() {
-    toolChange();
     isErasing = false;
     isSelectionOn = false;
     canMove = false;
     brush = true;
-
+    left = 0;
+    right = 2;
+    bottom = 0;
+    top1 = 2;
+    near = -10; // TODO - Adjust as needed
+    far = 10; // TODO - Adjust as needed
+    xOffset = 0;
+    yOffset = 0;
+    updateProjection();
 }
 function saveDataToFile() {
     const saveData = {
@@ -981,7 +977,6 @@ function identifySelectedVertices() {
 }
 
 function selectionOn() {
-    toolChange();
     console.log("here");
     isSelectionOn = true;
 
@@ -1088,7 +1083,6 @@ function updateLayerVerticesZIndex(layer, zIndex) {
 }
 
 function hand() {
-   toolChangeNoProject()
     console.log("hand");
     isErasing = false;
     isSelectionOn = false;
@@ -1098,47 +1092,16 @@ function hand() {
 }
 
 function zoomIn() {
-    toolChangeNoProject()
-    zoomInEnabled = true;
-  
+    zoomScale *= (1 + ZOOM_FACTOR);
+    updateProjection();
 }
 
 function zoomOut() {
-    toolChangeNoProject()
-    zoomOutEnabled = true;
-
-}
-function toolChange() {
-    zoomOutEnabled = false;
-    zoomInEnabled = false;
-    isSelectionOn = false;
-    brush = false;
-    canMove = false;
-    isSelectionOn = false;
-    zoomEnabled = false;
-
-    left = 0;
-    right = 2;
-    bottom = 0;
-    top1 = 2;
-    near = -10; // TODO - Adjust as needed
-    far = 10; // TODO - Adjust as needed
-    xOffset = 0;
-    yOffset = 0;
-    zoomScale = 1;
+    zoomScale *= (1 - ZOOM_FACTOR);
     updateProjection();
 }
-function toolChangeNoProject() {
-    zoomOutEnabled = false;
-    zoomInEnabled = false;
-    isSelectionOn = false;
-    brush = false;
-    canMove = false;
-    isSelectionOn = false;
-    zoomEnabled = false;
 
-  
-}
+
 /* UI Elements Functions */
 
 // Function to change the color and set the selectedColor class
