@@ -421,6 +421,7 @@ function drawing() {
             //console.log(layerColors[currentLayer]);
             console.log("All C");
             console.log(layerColors);
+            console.log(dynamicVertices);
             if (isErasing) {
 
                 var found = false
@@ -442,7 +443,7 @@ function drawing() {
                     console.log("C")
                     console.log(layerColors[currentLayer]);
                     layerVertices[currentLayer].splice(foundIndex, 3);
-                    layerColor[currentLayer].splice(foundIndex, 3);
+                    layerColors[currentLayer].splice(foundIndex, 3);
                     console.log(layerVertices[currentLayer]);
                     console.log(layerColors[currentLayer]);
                     fillBuffers();
