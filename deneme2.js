@@ -74,8 +74,9 @@ window.onload = function init() {
     //  Configure WebGL
     //
     gl.viewport(0, 0, canvas.width, canvas.height);
-
     gl.clearColor(1.0, 1.0, 1.0, 1.0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    
     // Set size value
     const size = gl.getUniformLocation(program, 'size');
     gl.uniform1f(size, 0.1); // Cube Size
