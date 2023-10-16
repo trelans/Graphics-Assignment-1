@@ -107,30 +107,30 @@
                     <h5>Layers</h5>
                     <ul class="layer-list">
                         <li class="layer clickableLayer selectedLayer" id="layer1">
-                            <span class="col-8" style="font-size: larger;" onclick="selectLayer(this)">Layer 1</span>
+                            <span class="col-8" style="font-size: larger;" onclick="selectLayerUI(this, 0)">Layer 0</span>
                             <div class="col-4 layer-buttons">
                                 <img src="./images/up.svg" class="w-50 clickable" title="Increase Layer"
-                                    onclick="moveLayer('up', this)" />
+                                    onclick="moveLayer('up', this, 0)" />
                                 <img src="./images/down.svg" class="w-50 clickable" title="Decrease Layer Order"
-                                    onclick="moveLayer('down', this)" />
+                                    onclick="moveLayer('down', this, 0)" />
                             </div>
                         </li>
                         <li class="layer clickableLayer" id="layer2">
-                            <span class="col-8" style="font-size: larger;" onclick="selectLayer(this)">Layer 2</span>
+                            <span class="col-8" style="font-size: larger;" onclick="selectLayerUI(this, 1)">Layer 1</span>
                             <div class="col-4 layer-buttons">
                                 <img src="./images/up.svg" class="w-50 clickable" title="Increase Layer"
-                                    onclick="moveLayer('up', this)" />
+                                    onclick="moveLayer('up', this, 1)" />
                                 <img src="./images/down.svg" class="w-50 clickable" title="Decrease Layer Order"
-                                    onclick="moveLayer('down', this)" />
+                                    onclick="moveLayer('down', this, 1)" />
                             </div>
                         </li>
                         <li class="layer clickableLayer" id="layer3">
-                            <span class="col-8" style="font-size: larger;" onclick="selectLayer(this)">Layer 3</span>
+                            <span class="col-8" style="font-size: larger;" onclick="selectLayerUI(this, 2)">Layer 2</span>
                             <div class="col-4 layer-buttons">
                                 <img src="./images/up.svg" class="w-50 clickable" title="Increase Layer"
-                                    onclick="moveLayer('up', this)" />
+                                    onclick="moveLayer('up', this, 2)" />
                                 <img src="./images/down.svg" class="w-50 clickable" title="Decrease Layer Order"
-                                    onclick="moveLayer('down', this)" />
+                                    onclick="moveLayer('down', this, 2)" />
                             </div>
                         </li>
                     </ul>

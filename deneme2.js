@@ -23,7 +23,24 @@ var colors = [
     vec4(0.0, 1.0, 1.0, 1.0)   // cyan
 ];
 
+let currentLayer = 0; // Initial layer (1)
+let currentLayerOffset = 0; // Initial layer offset (0)
+let currentLayerZIndex = 2; // Initial layer Z index (2)
 
+const layerIndexes = [0, 1, 2];
+const layerSizes = [0, 0, 0];
+
+const layerVertices = [
+    [],
+    [],
+    []
+];
+
+const layerColors = [
+    [],
+    [],
+    []
+];
 
 const numRows = 40; // Number of rows
 const numColumns = 40; // Number of columns
@@ -70,13 +87,17 @@ window.onload = function init() {
     program = initShaders(gl, "vertex-shader", "fragment-shader");
     gl.useProgram(program);
 
+    gl.enable(gl.DEPTH_TEST);
+    gl.depthFunc(gl.LEQUAL);
+
     //
     //  Configure WebGL
     //
     gl.viewport(0, 0, canvas.width, canvas.height);
     gl.clearColor(1.0, 1.0, 1.0, 1.0);
-    gl.clear(gl.COLOR_BUFFER_BIT);
-    
+
+    gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
     // Set size value
     const size = gl.getUniformLocation(program, 'size');
     gl.uniform1f(size, 0.1); // Cube Size
@@ -86,20 +107,19 @@ window.onload = function init() {
     const right = 2;
     const bottom = 0;
     const top = 2;
-    const near = -1;
-    const far = 1;
+    const near = -10; // TODO - Adjust as needed
+    const far = 10; // TODO - Adjust as needed
     const projectionMatrix = ortho(left, right, bottom, top, near, far);
     const u_ProjectionMatrix = gl.getUniformLocation(program, 'projectionMatrix');
     gl.uniformMatrix4fv(u_ProjectionMatrix, false, flatten(projectionMatrix));
-  
-// will delete
-  for (let m = 0; m < numRows * numColumns; m++) {
+
+    // will delete
+    for (let m = 0; m < numRows * numColumns; m++) {
         for (let l = 0; l < 4; l++) {
             for (let k = 0; k < 3; k++) {
                 const color = vec4(0.0, 1.0, 1.0, 1.0);
                 vertexColors.push(color);
             }
-        
         }
     }
 
@@ -141,7 +161,7 @@ window.onload = function init() {
     pushState(); // Save the initial state
     VBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, VBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, numColumns * numRows * 3 * 16, gl.STATIC_DRAW);
+    gl.bufferData(gl.ARRAY_BUFFER, numColumns * numRows * 3 * 16 * layerVertices.length, gl.STATIC_DRAW);
 
     VPosition = gl.getAttribLocation(program, "position");
     gl.vertexAttribPointer(VPosition, 3, gl.FLOAT, false, 0, 0);
@@ -150,7 +170,7 @@ window.onload = function init() {
 
     cBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, cBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, numColumns * numRows * 4 *32, gl.STATIC_DRAW);
+    gl.bufferData(gl.ARRAY_BUFFER, numColumns * numRows * 4 * 32 * layerColors.length, gl.STATIC_DRAW);
 
     vColor = gl.getAttribLocation(program, "vColor");
     gl.vertexAttribPointer(vColor, 4, gl.FLOAT, false, 0, 0);
@@ -198,43 +218,48 @@ window.onload = function init() {
 
 function reallocateBuffers() {
 
-
-
     gl.bindBuffer(gl.ARRAY_BUFFER, VBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, numColumns * numRows * 3 * 16, gl.STATIC_DRAW);
+    gl.bufferData(gl.ARRAY_BUFFER, numColumns * numRows * 3 * 16 * layerVertices.length, gl.STATIC_DRAW);
 
 
     gl.bindBuffer(gl.ARRAY_BUFFER, cBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, numColumns * numRows * 4 *32, gl.STATIC_DRAW);
-
+    gl.bufferData(gl.ARRAY_BUFFER, numColumns * numRows * 4 * 32 * layerColors.length, gl.STATIC_DRAW);
 
 }
 
 function fillBuffers() {
 
     reallocateBuffers();
-    for (var i = 0; i < currentVertices.length; i++) {
-       
-         var offsetVertex = i*12;
-         var offsetColor = i*16;
-         gl.bindBuffer(gl.ARRAY_BUFFER, cBuffer);
-         gl.bufferSubData(gl.ARRAY_BUFFER, offsetColor, flatten(currentColors[i]));
 
-         gl.bindBuffer(gl.ARRAY_BUFFER, VBuffer);
-         gl.bufferSubData(gl.ARRAY_BUFFER, offsetVertex , flatten(currentVertices[i]));
+    let layerOffset = 0;
+
+    for (var i = layerIndexes.length - 1; i >= 0; i--) {
+        console.log("layer rendering order" + layerVertices[layerIndexes[i]]);
+        for (var j = 0; j < layerVertices[layerIndexes[i]].length; j++) {
+            var offsetVertex = j * 12;
+            var offsetColor = j * 16;
+            var offsetLayerVertex = layerOffset * 12;
+            var offsetLayerColor = layerOffset * 16;
+            gl.bindBuffer(gl.ARRAY_BUFFER, cBuffer);
+            gl.bufferSubData(gl.ARRAY_BUFFER, offsetLayerColor + offsetColor, flatten(layerColors[layerIndexes[i]][j]));
+
+            gl.bindBuffer(gl.ARRAY_BUFFER, VBuffer);
+            gl.bufferSubData(gl.ARRAY_BUFFER, offsetLayerVertex + offsetVertex, flatten(layerVertices[layerIndexes[i]][j]));
+        }
+        layerOffset += layerVertices[layerIndexes[i]].length;
     }
-    
-
 }
+
+
 function render() {
 
-    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.drawArrays(gl.TRIANGLES, 0, index);
 
 }
 
+// TODO - Not called anywhere, may be removed
 function updateBuffers() {
-  
     // Updating vertex color buffer
     gl.bindBuffer(gl.ARRAY_BUFFER, cBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, flatten(currentColors), gl.STATIC_DRAW);
@@ -309,7 +334,7 @@ function drawing() {
         y = 2 - (2 * y / canvas.height);
 
 
-        
+
 
         var leftOrder = Math.floor(x / cubeSize + 1);
         var bottomOrder = Math.floor(y / cubeSize + 1);
@@ -366,85 +391,87 @@ function drawing() {
         // Change Color
 
         indexColor = 12 * (((bottomOrder - 1) * numColumns + leftOrder) - 1) + (3 * offset);
-    
+
         if ((indexColor != previousIndexColor) || isErasing) {
-          
-                var offsetVertex = index*12;
-                var offsetColor = index*16;
 
-                 previousIndexColor = indexColor;
+            var offsetVertex = index * 12;
+            var offsetColor = index * 16;
+            var offsetLayerVertex = currentLayerOffset * 12;
+            var offsetLayerColor = currentLayerOffset * 16;
 
-                 for (var i = indexColor; i < indexColor + 3; i++) {
-                    
-                 
-                    if (!isErasing) {
+            previousIndexColor = indexColor;
 
-                          index++;
-                           console.log("ındex" + index) 
-                          currentVertices.push([vertices[i*3] , vertices[(i*3) + 1], vertices[(i*3) + 2] ]);
-                               currentColors.push(currentColor);
-                    }
-                    dynamicVertices.push( [vertices[i*3] , vertices[(i*3) + 1], vertices[(i*3) + 2] ]);
-                    dynamicColors.push(currentColor);
-               
-                    
-                  
+            for (var i = indexColor; i < indexColor + 3; i++) {
+
+                if (!isErasing) {
+                    index++;
+                    console.log("ındex" + index);
+                    layerVertices[currentLayer].push([vertices[i * 3], vertices[(i * 3) + 1], currentLayerZIndex]);
+                    layerColors[currentLayer].push(currentColor);
                 }
-                 console.log("V")
-               console.log(currentVertices);
-                   console.log("C")
-               console.log(currentColors);
-                 if (isErasing) {
+                dynamicVertices.push([vertices[i * 3], vertices[(i * 3) + 1], currentLayerZIndex]);
+                dynamicColors.push(currentColor);
 
-                    var found = false
-                    var foundIndex = -1;
-                    for (var i = 0; i < currentVertices.length; i = i +3) {
-                        var currentVertex = currentVertices[i];
-                        var currentVertex2 = currentVertices[i+1];
-                        var currentVertex3 = currentVertices[i+2];
-                        if (arraysAreEqual(currentVertex, dynamicVertices[0]) && arraysAreEqual(currentVertex2, dynamicVertices[1]) && arraysAreEqual(currentVertex3, dynamicVertices[2])) {
-                            found = true;
-                            foundIndex = i;
-                            break;
-                        }
+            }
+            //console.log("V")
+            //console.log(layerVertices[currentLayer]);
+            console.log("All V");
+            console.log(layerVertices);
+            //console.log("C")
+            //console.log(layerColors[currentLayer]);
+            console.log("All C");
+            console.log(layerColors);
+            if (isErasing) {
+
+                var found = false
+                var foundIndex = -1;
+                for (var i = 0; i < layerVertices[currentLayer].length; i = i + 3) {
+                    var currentVertex = layerVertices[currentLayer][i];
+                    var currentVertex2 = layerVertices[currentLayer][i + 1];
+                    var currentVertex3 = layerVertices[currentLayer][i + 2];
+                    if (arraysAreEqual(currentVertex, dynamicVertices[0]) && arraysAreEqual(currentVertex2, dynamicVertices[1]) && arraysAreEqual(currentVertex3, dynamicVertices[2])) {
+                        found = true;
+                        foundIndex = i;
+                        break;
                     }
+                }
 
-                    if (found) {
-                           console.log("V")
-                           console.log(currentVertices);
-                            console.log("C")
-                           console.log(currentColors);
-                           currentVertices.splice(foundIndex, 3);
-                           currentColors.splice(foundIndex, 3);
-                           console.log(currentVertices);
-                           console.log(currentColors);  
-                           fillBuffers();
-                           index = index-3;
-                           console.log("ındex" + index)
-                           render();
+                if (found) {
+                    console.log("V")
+                    console.log(layerVertices[currentLayer]);
+                    console.log("C")
+                    console.log(layerColors[currentLayer]);
+                    layerVertices[currentLayer].splice(foundIndex, 3);
+                    layerColor[currentLayer].splice(foundIndex, 3);
+                    console.log(layerVertices[currentLayer]);
+                    console.log(layerColors[currentLayer]);
+                    fillBuffers();
+                    index = index - 3;
+                    console.log("ındex" + index)
+                    render();
 
-                    } else {
-                        console.log("dynamicVertices[0] not found in currentVertices");
-                    }
-         
+                } else {
+                    console.log("dynamicVertices[0] not found in currentVertices");
+                }
 
-                 }
-                 else {
-                           // Updating vertex color buffer
-                        gl.bindBuffer(gl.ARRAY_BUFFER, cBuffer);
-                        gl.bufferSubData(gl.ARRAY_BUFFER, offsetColor, flatten(dynamicColors));
-        
 
-                        // Assuming vBuffer is your buffer for vertices
-                        gl.bindBuffer(gl.ARRAY_BUFFER, VBuffer);
-                        gl.bufferSubData(gl.ARRAY_BUFFER, offsetVertex , flatten(dynamicVertices));
-                        render();
-                 }
-               
-         
-                dynamicVertices = [];
-                dynamicColors = [];
-             
+            }
+            else {
+                // Updating vertex color buffer
+                gl.bindBuffer(gl.ARRAY_BUFFER, cBuffer);
+                gl.bufferSubData(gl.ARRAY_BUFFER, offsetLayerColor + offsetColor, flatten(dynamicColors));
+
+
+                // Assuming vBuffer is your buffer for vertices
+                gl.bindBuffer(gl.ARRAY_BUFFER, VBuffer);
+                gl.bufferSubData(gl.ARRAY_BUFFER, offsetLayerVertex + offsetVertex, flatten(dynamicVertices));
+                render();
+            }
+
+
+            dynamicVertices = [];
+            dynamicColors = [];
+
 
         }
     }
@@ -538,8 +565,8 @@ function undo() {
         currentVertices.push(...previousVertices);
         currentColors.length = 0;
         currentColors.push(...previousColors);
- 
-      fillBuffers();
+
+        fillBuffers();
     }
 }
 
@@ -549,7 +576,7 @@ function eraser() {
 }
 function brush() {
     isErasing = false;
-    
+
 }
 function saveDataToFile() {
     const saveData = {
@@ -630,6 +657,55 @@ function identifySelectedVertices() {
     // You can use this information to move the selected triangles as needed.
 }
 
+function selectLayer(layer) {
+    currentLayer = layer;
+    currentLayerZIndex = 2 - layerIndexes.indexOf(layer);
+    updateCurrentLayerOffset();
+}
+
+function updateCurrentLayerOffset() {
+    let offset = 0;
+    for (let i = 0; i <= currentLayer; i++) {
+        offset += layerSizes[i];
+    }
+    currentLayerOffset = offset;
+}
+
+function increaseLayer(layer) {
+    const index = layerIndexes.indexOf(layer);
+
+    if (index !== 0) {
+        // Swap the layer with the next one
+        layerIndexes[index] = layerIndexes[index - 1];
+        layerIndexes[index - 1] = layer;
+        console.log(layerIndexes);
+        updateLayerVerticesZIndex(layer, 2 - (index - 1));
+        updateLayerVerticesZIndex(layerIndexes[index], 2 - index);
+        render();
+    }
+
+}
+
+function decreaseLayer(layer) {
+    const index = layerIndexes.indexOf(layer);
+
+    if (index !== layerIndexes.length - 1) {
+        // Swap the layer with the previous one
+        layerIndexes[index] = layerIndexes[index + 1];
+        layerIndexes[index + 1] = layer;
+        updateLayerVerticesZIndex(layer, 2 - (index + 1));
+        updateLayerVerticesZIndex(layerIndexes[index], 2 - index);
+        render();
+    }
+}
+
+function updateLayerVerticesZIndex(layer, zIndex) {
+    console.log(layerVertices);
+    for (let i = 0; i < layerVertices[layer].length; i += 1) {
+        layerVertices[layer][i][2] = zIndex;
+    }
+    console.log(layerVertices);
+}
 
 /* UI Elements Functions */
 
@@ -647,19 +723,24 @@ function changeColorUI(element, color) {
 }
 
 // Function to move a layer up or down
-function moveLayer(direction, element) {
+function moveLayer(direction, element, layerIndex) {
     const listItem = element.closest('.layer');
     const list = listItem.parentElement;
 
     if (direction === 'up' && listItem.previousElementSibling) {
         list.insertBefore(listItem, listItem.previousElementSibling);
+        // Update layer order in the code
+        increaseLayer(layerIndex);
     } else if (direction === 'down' && listItem.nextElementSibling) {
         list.insertBefore(listItem.nextElementSibling, listItem);
+        // Update layer order in the code
+        decreaseLayer(layerIndex);
     }
+
 }
 
 // Function to select a layer and deselect the previously selected one
-function selectLayer(layer) {
+function selectLayerUI(layer, layerIndex) {
     const layerList = document.querySelectorAll('.layer');
 
     // Deselect all layers
@@ -672,12 +753,15 @@ function selectLayer(layer) {
     if (closestLi) {
         closestLi.classList.add('selectedLayer');
     }
+
+    // Update the current layer
+    selectLayer(layerIndex);
 }
 
 // Function to select a tool and deselect the previously selected one
 function selectTool(element, tool) {
     const toolList = document.querySelectorAll('.clickable.selectedTool');
-    
+
     // Deselect all tools
     toolList.forEach((item) => {
         item.classList.remove('selectedTool');
