@@ -497,6 +497,8 @@ function changeColor(color) {
         'red': [1.0, 0.0, 0.0, 1.0],
         'green': [0.0, 1.0, 0.0, 1.0],
         'blue': [0.0, 0.0, 1.0, 1.0],
+        'yellow': [1.0, 1.0, 0.0, 1.0],
+        'orange': [1.0, 0.5, 0.0, 1.0],
     };
 
     if (colorMap[color]) {

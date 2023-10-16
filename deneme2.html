@@ -69,7 +69,8 @@
                 <div>
                     <div class="col-12">
                         <img src="./images/undo.svg" class="w-25 clickable" title="undo" id="undo-button" />
-                        <img src="./images/redo.svg" class="w-25 clickable" title="redo" id="redo-button" onclick="redo()" />
+                        <img src="./images/redo.svg" class="w-25 clickable" title="redo" id="redo-button"
+                            onclick="redo()" />
                     </div>
                 </div>
             </div>
@@ -90,24 +91,27 @@
                             onclick="changeColorUI(this, 'green')"></div>
                         <div class="color clickableColor" style="background-color: blue"
                             onclick="changeColorUI(this, 'blue')"></div>
-                        <div class="color clickableColor"></div>
-                        <div class="color clickableColor"></div>
-                        <div class="color clickableColor"></div>
-                        <div class="color clickableColor"></div>
-                        <div class="color clickableColor"></div>
-                        <div class="color clickableColor"></div>
-                        <div class="color clickableColor"></div>
-                        <div class="color clickableColor"></div>
-                        <div class="color clickableColor"></div>
-                        <div class="color clickableColor"></div>
-                        <div class="color clickableColor"></div>
+                        <div class="color clickableColor" style="background-color: yellow"
+                            onclick="changeColorUI(this, 'yellow')"></div>
+                        <div class="color clickableColor" style="background-color: orange"
+                            onclick="changeColorUI(this, 'orange')"></div>
+                        <div class="color"></div>
+                        <div class="color"></div>
+                        <div class="color"></div>
+                        <div class="color"></div>
+                        <div class="color"></div>
+                        <div class="color"></div>
+                        <div class="color"></div>
+                        <div class="color"></div>
+                        <div class="color"></div>
                     </div>
                 </div>
                 <div>
                     <h5>Layers</h5>
                     <ul class="layer-list">
                         <li class="layer clickableLayer selectedLayer" id="layer1">
-                            <span class="col-8" style="font-size: larger;" onclick="selectLayerUI(this, 0)">Layer 0</span>
+                            <span class="col-8" style="font-size: larger;" onclick="selectLayerUI(this, 0)">Layer
+                                0</span>
                             <div class="col-4 layer-buttons">
                                 <img src="./images/up.svg" class="w-50 clickable" title="Increase Layer"
                                     onclick="moveLayer('up', this, 0)" />
@@ -116,7 +120,8 @@
                             </div>
                         </li>
                         <li class="layer clickableLayer" id="layer2">
-                            <span class="col-8" style="font-size: larger;" onclick="selectLayerUI(this, 1)">Layer 1</span>
+                            <span class="col-8" style="font-size: larger;" onclick="selectLayerUI(this, 1)">Layer
+                                1</span>
                             <div class="col-4 layer-buttons">
                                 <img src="./images/up.svg" class="w-50 clickable" title="Increase Layer"
                                     onclick="moveLayer('up', this, 1)" />
@@ -125,7 +130,8 @@
                             </div>
                         </li>
                         <li class="layer clickableLayer" id="layer3">
-                            <span class="col-8" style="font-size: larger;" onclick="selectLayerUI(this, 2)">Layer 2</span>
+                            <span class="col-8" style="font-size: larger;" onclick="selectLayerUI(this, 2)">Layer
+                                2</span>
                             <div class="col-4 layer-buttons">
                                 <img src="./images/up.svg" class="w-50 clickable" title="Increase Layer"
                                     onclick="moveLayer('up', this, 2)" />
@@ -147,7 +153,8 @@
                             </btn>
                         </div>
                         <div>
-                            <button class="btn btn-primary" id="save-button" onclick="saveDataToFile()">Save Data</button>
+                            <button class="btn btn-primary" id="save-button" onclick="saveDataToFile()">Save
+                                Data</button>
                         </div>
                     </div>
                 </div>
