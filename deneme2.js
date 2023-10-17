@@ -79,7 +79,7 @@ var lastSelectionStartBase = { x: 0, y: 0 };
 var lastSelectionEndBase = { x: 0, y: 0 };
 
 var isSelectionOn = false;
-
+let pushing = false;
 
 var rectBuffer;
 var positionLoc;
@@ -511,7 +511,10 @@ window.onload = function init() {
         }
         else if (brush || isErasing) {
             console.log(undoHistory);
-            pushState();
+            if (pushing) {
+                pushState();
+                pushing = false;
+            }
             isPainting = false;
         }
         else if (zoomInEnabled) {
@@ -528,14 +531,6 @@ window.onload = function init() {
         isMouseDown = false;
         isPainting = false;
     });
-
-
-
-    const saveButton = document.getElementById("save-button");
-    saveButton.addEventListener("click", saveData);
-
-    const loadButton = document.getElementById("load-button");
-    loadButton.addEventListener("click", loadData);
 }
 
 function copy() {
@@ -654,6 +649,7 @@ function updateProjection() {
 }
 
 function drawing() {
+
 
     if (isMouseDown) {
 
@@ -804,7 +800,8 @@ function drawing() {
                     console.log(layerColors[currentLayer]);
                     fillBuffers();
                     index = index - 3;
-                    console.log("ındex" + index)
+                    console.log("ındex" + index);
+                    pushing = true;
                     render();
 
                 } else {
@@ -824,6 +821,7 @@ function drawing() {
                 // Assuming vBuffer is your buffer for vertices
                 gl.bindBuffer(gl.ARRAY_BUFFER, VBuffer);
                 gl.bufferSubData(gl.ARRAY_BUFFER, offsetLayerVertex + offsetVertex, flatten(dynamicVertices));
+                pushing = true;
                 render();
             }
 
@@ -914,6 +912,7 @@ function redo() {
 
 // Function to save the current state to the undo history
 function pushState() {
+
     console.log("undoHistory.currentIndex: " + undoHistory.currentIndex);
     console.log("undoHistory.vertexStates.length: " + undoHistory.vertexStates.length);
     console.log(undoHistory.vertexStates);
@@ -1256,6 +1255,9 @@ function changeColorUI(element, color) {
     // Add selectedColor class to the clicked color element
     element.classList.add('selectedColor');
     changeColor(color);
+
+    const brush = document.getElementById("brush");
+    selectTool(brush, 'brush');
 }
 
 // Function to move a layer up or down
@@ -1385,6 +1387,5 @@ function toggleShortcutList() {
 
         // Show the shortcut list
         shortcutList.style.display = 'block';
-        shortcutList.style.textDecoration = 'none';
     }
 }
