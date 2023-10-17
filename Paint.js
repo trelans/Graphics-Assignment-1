@@ -962,7 +962,7 @@ function saveDataToFile() {
     // Create a download link for the Blob
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = 'webgl_data.json'; // File name
+    a.download = 'paint-work.ko'; // File name
     a.style.display = 'none';
 
     // Append the link to the document and trigger a click event to download the file
