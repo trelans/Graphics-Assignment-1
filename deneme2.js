@@ -301,7 +301,6 @@ window.onload = function init() {
 
 
                 }
-
                 console.log(layerVertices[currentLayer]);
                 console.log(willBeCopiedVertex);
                 console.log(willBeCopiedColor);
@@ -320,14 +319,16 @@ window.onload = function init() {
             if (willBeCopiedVertex.length > 0) {
                 console.log(layerVertices[currentLayer]);
                 console.log(willBeCopiedVertex);
+                index = index + willBeCopiedVertex.length;
+
                 layerVertices[currentLayer].push(...willBeCopiedVertex)
                 layerColors[currentLayer].push(...willBeCopiedColor)
                 console.log(layerVertices[currentLayer]);
                 console.log(layerColors[currentLayer]);
                 fillBuffers();
                 render();
-
             }
+
         }
     });
 
@@ -376,7 +377,7 @@ window.onload = function init() {
             selectedVertices = []; // Clear the selected vertices list.
             redrawCanvas()
         }
-        else if (brush) {
+        else if (brush || isErasing) {
 
             drawing();
 
@@ -441,7 +442,7 @@ window.onload = function init() {
                 redrawingCanvas();
 
 
-            } else if (brush) {
+            } else if (brush || isErasing) {
                 // Set the flag to indicate painting
                 isPainting = true;
                 drawing();
@@ -496,17 +497,18 @@ window.onload = function init() {
                 deSelect();
             }
         }
-        else if (brush) {
+        else if (brush || isErasing) {
+            console.log(undoHistory);
             pushState();
             isPainting = false;
         }
         else if (zoomInEnabled) {
-               zoomScale *= (1 - ZOOM_FACTOR);
-                updateProjection();
+            zoomScale *= (1 - ZOOM_FACTOR);
+            updateProjection();
         }
         else if (zoomOutEnabled) {
-                zoomScale *= (1 + ZOOM_FACTOR);
-                updateProjection();
+            zoomScale *= (1 + ZOOM_FACTOR);
+            updateProjection();
         }
     });
 
@@ -515,8 +517,7 @@ window.onload = function init() {
         isPainting = false;
     });
 
-    const undoButton = document.getElementById("undo-button");
-    undoButton.addEventListener("click", undo);
+    
 
     const saveButton = document.getElementById("save-button");
     saveButton.addEventListener("click", saveData);
@@ -624,7 +625,6 @@ function updateProjection() {
 
 function drawing() {
 
-
     if (isMouseDown) {
 
         // Get the mouse coordinates relative to the canvas
@@ -693,7 +693,6 @@ function drawing() {
         // Change Color
 
         indexColor = 12 * (((bottomOrder - 1) * numColumns + leftOrder) - 1) + (3 * offset);
-
         if ((indexColor != previousIndexColor) || isErasing) {
 
             var offsetVertex = index * 12;
@@ -814,6 +813,8 @@ function changeColor(color) {
 
 
 function redo() {
+    console.log(undoHistory.currentIndex);
+
     if (undoHistory.currentIndex < undoHistory.vertexStates.length - 1) {
         undoHistory.currentIndex++;
 
@@ -822,8 +823,10 @@ function redo() {
         const nextColors = undoHistory.colorStates[undoHistory.currentIndex];
 
         // Update the current layer's state
-        layerVertices[currentLayer] = nextVertices.slice();
-        layerColors[currentLayer] = nextColors.slice();
+        layerVertices = nextVertices.slice();
+        layerColors = nextColors.slice();
+
+        console.log(layerVertices);
 
         fillBuffers();
         render();
@@ -834,12 +837,14 @@ function redo() {
 
 // Function to save the current state to the undo history
 function pushState() {
-    console.log("undo history", undoHistory);
+    console.log("undoHistory.currentIndex: " + undoHistory.currentIndex);
+    console.log("undoHistory.vertexStates.length: " + undoHistory.vertexStates.length);
+    console.log(undoHistory.vertexStates);
     if (undoHistory.currentIndex < undoHistory.vertexStates.length - 1) {
-        console.log("redo history", undoHistory)
         // Remove redo history when a new action is performed
         undoHistory.vertexStates.splice(undoHistory.currentIndex + 1);
         undoHistory.colorStates.splice(undoHistory.currentIndex + 1);
+        console.log(undoHistory.vertexStates);
     }
 
     // Create deep copies of the arrays
@@ -850,11 +855,8 @@ function pushState() {
         clonedColors.push([...layerColors[i]]);
     }
 
-    console.log("cloned", clonedVertices);
-    console.log("vertex state", undoHistory.vertexStates);
     undoHistory.vertexStates.push(clonedVertices);
     undoHistory.colorStates.push(clonedColors);
-    console.log("vertex state after", undoHistory.vertexStates);
 
     if (undoHistory.vertexStates.length > undoHistory.maxHistoryLength) {
         // Remove the oldest state if the history exceeds the limit
@@ -863,11 +865,13 @@ function pushState() {
     }
 
     undoHistory.currentIndex = undoHistory.vertexStates.length - 1;
+    console.log(undoHistory.vertexStates);
 }
 
 // Function to undo the last action
 function undo() {
     if (undoHistory.currentIndex > 0) {
+        console.log(undoHistory.currentIndex);
         undoHistory.currentIndex--;
 
         // Restore the previous state from the undo history
@@ -875,9 +879,11 @@ function undo() {
         const previousColors = undoHistory.colorStates[undoHistory.currentIndex];
 
         // Update the current layer's state
-        layerVertices[currentLayer] = previousVertices.slice();
-        layerColors[currentLayer] = previousColors.slice();
+        layerVertices = previousVertices.slice();
+        layerColors = previousColors.slice();
 
+
+        console.log(undoHistory.vertexStates);
         fillBuffers();
         render();
     }
@@ -936,23 +942,19 @@ function loadFileData(inputFile) {
             const saveData = JSON.parse(jsonSaveData);
 
             // Update the arrays with the loaded data
-            vertices.length = 0;
-            vertices.push(...saveData.vertices);
-            vertexColors.length = 0;
-            vertexColors.push(...saveData.vertexColors);
+            layerVertices = [...saveData.vertices];
+            layerColors = [...saveData.vertexColors];
 
-            // Update WebGL buffers with the loaded data
-            gl.bindBuffer(gl.ARRAY_BUFFER, VBuffer);
-            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(layerVertices[currentLayer]), gl.STATIC_DRAW);
-
-            gl.bindBuffer(gl.ARRAY_BUFFER, cBuffer);
-            gl.bufferData(gl.ARRAY_BUFFER, flatten(layerColors[currentLayer]), gl.STATIC_DRAW);
-
-            render(); // Redraw the canvas with the loaded data
         };
 
         reader.readAsText(file);
+        // Update WebGL buffers with the loaded data
+        fillBuffers();
+
+        render(); // Redraw the canvas with the loaded data
     }
+    console.log("loadFileData");
+    console.log(layerVertices);
 }
 
 function identifySelectedVertices() {
@@ -1088,7 +1090,7 @@ function updateLayerVerticesZIndex(layer, zIndex) {
 }
 
 function hand() {
-   toolChangeNoProject()
+    toolChangeNoProject()
     console.log("hand");
     isErasing = false;
     isSelectionOn = false;
@@ -1100,7 +1102,7 @@ function hand() {
 function zoomIn() {
     toolChangeNoProject()
     zoomInEnabled = true;
-  
+
 }
 
 function zoomOut() {
@@ -1137,7 +1139,7 @@ function toolChangeNoProject() {
     isSelectionOn = false;
     zoomEnabled = false;
 
-  
+
 }
 /* UI Elements Functions */
 
