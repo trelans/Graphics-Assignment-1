@@ -1350,3 +1350,41 @@ function updateLayerOrder(newLayerIndexes) {
         layersContainer.appendChild(layerElement);
     });
 }
+
+function toggleShortcutList() {
+    const shortcutList = document.querySelector('.shortcut-list');
+    
+    // Check if the shortcut list is visible
+    if (shortcutList.style.display === 'block') {
+        // Hide the shortcut list
+        shortcutList.style.display = 'none';
+    } else {
+        // Show the shortcut list
+
+        // Check if the shortcut list is already filled to avoid duplicating the elements
+        if (shortcutList.innerHTML.trim() === '') {
+            // Define the predefined elements
+            const shortcuts = [
+                { key: 'Ctrl + Z', action: 'Undo' },
+                { key: 'Ctrl + Y', action: 'Redo' },
+                { key: 'Ctrl + C', action: 'Copy' },
+                { key: 'Ctrl + V', action: 'Paste On Selection' },
+            ];
+
+            // Create a list of shortcuts
+            const shortcutUl = document.createElement('ul');
+            shortcuts.forEach((shortcut) => {
+                const shortcutLi = document.createElement('li');
+                shortcutLi.textContent = `${shortcut.key} - ${shortcut.action}`;
+                shortcutUl.appendChild(shortcutLi);
+            });
+
+            // Append the list of shortcuts to the "shortcut-list" div
+            shortcutList.appendChild(shortcutUl);
+        }
+
+        // Show the shortcut list
+        shortcutList.style.display = 'block';
+        shortcutList.style.textDecoration = 'none';
+    }
+}

@@ -59,7 +59,8 @@
                             onclick="selectTool(this, 'zoom-out')" />
                     </div>
                     <div class="col-12">
-                        <img src="./images/hand.svg" class="w-25 clickable" title="hand" onclick="selectTool(this, 'hand')" />
+                        <img src="./images/hand.svg" class="w-25 clickable" title="hand"
+                            onclick="selectTool(this, 'hand')" />
                     </div>
                     <div class="col-12">
                         <img src="./images/rect-select.svg" class="w-25 clickable" title="rectangular selection"
@@ -68,7 +69,8 @@
                 </div>
                 <div>
                     <div class="col-12">
-                        <img src="./images/undo.svg" class="w-25 clickable" title="undo" id="undo-button" onclick="undo()" />
+                        <img src="./images/undo.svg" class="w-25 clickable" title="undo" id="undo-button"
+                            onclick="undo()" />
                         <img src="./images/redo.svg" class="w-25 clickable" title="redo" id="redo-button"
                             onclick="redo()" />
                     </div>
@@ -141,16 +143,23 @@
                         </li>
                     </ul>
                 </div>
+                <div class="shortcut-list">
+
+                </div>
                 <div class="ls-section">
-                    <h5>Load / Save</h5>
+                    <h5>Options</h5>
+
+                    <div class="col-12 my-3">
+                        <button class="btn btn-primary" onclick="toggleShortcutList()">Open / Close Shortcut List</button>
+                    </div>
                     <div class="lsButtons">
-                        <div class="">
-                            <btn class="btn btn-primary">
+                        <div>
+                            <button class="btn btn-primary">
                                 <label for="load-button" style="cursor: pointer;">
                                     Load Data
                                 </label>
                                 <input type="file" id="load-button" onchange="loadFileData(this)"></input>
-                            </btn>
+                            </button>
                         </div>
                         <div>
                             <button class="btn btn-primary" id="save-button" onclick="saveDataToFile()">Save
