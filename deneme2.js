@@ -806,10 +806,6 @@ function changeColor(color) {
 
     if (colorMap[color]) {
         currentColor = colorMap[color];
-        // You can pass the new color to your WebGL rendering function here
-        // For example, you can update the uniform variable for the color in your shader.
-        // Example:
-        // gl.uniform4fv(gl.getUniformLocation(program, "uColor"), currentColor);
     }
 }
 
