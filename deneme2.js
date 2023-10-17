@@ -75,6 +75,8 @@ var selectionEnd = { x: 0, y: 0 };
 
 var lastSelectionStart = { x: 0, y: 0 };
 var lastSelectionEnd = { x: 0, y: 0 };
+var lastSelectionStartBase = { x: 0, y: 0 };
+var lastSelectionEndBase = { x: 0, y: 0 };
 
 var isSelectionOn = false;
 
@@ -227,11 +229,8 @@ window.onload = function init() {
 
 
         if (isSelectedBefore) {
-            let indexVertices = layerVertices[currentLayer].length - 6;
-            layerVertices[currentLayer].splice(indexVertices, 6);
-            layerColors[currentLayer].splice(indexVertices, 6);
-            fillBuffers();
-            render();
+
+            deSelect()
 
         }
         isSelectedBefore = true;
@@ -384,7 +383,7 @@ window.onload = function init() {
             drawing();
 
         }
-        else if (zoomEnabled || zoomInEnabled || zoomOutEnabled) {
+        else if (zoomEnabled) {
             console.log("mousedown event fired kutay");
             isDragging = true;
             lastX = event.clientX;
@@ -416,6 +415,10 @@ window.onload = function init() {
                 var deltaMovementX = selectionEnd.x - selectionStart.x;
                 var deltaMovementY = selectionEnd.y - selectionStart.y;
                 console.log("deltaX: " + deltaMovementX + "deltaY: " + deltaMovementY);
+                lastSelectionStart.x = lastSelectionStartBase.x + deltaMovementX;
+                lastSelectionStart.y = lastSelectionStartBase.y + deltaMovementY;
+                lastSelectionEnd.x = lastSelectionEndBase.x + deltaMovementX;
+                lastSelectionEnd.y = lastSelectionEndBase.y + deltaMovementY;
 
                 for (var i = 0; i < selectedVertices.length; i++) {
                     var currentIndex = selectedVertices[i];
@@ -449,7 +452,7 @@ window.onload = function init() {
                 isPainting = true;
                 drawing();
 
-            } else if (zoomEnabled || zoomInEnabled || zoomOutEnabled) {
+            } else if (zoomEnabled) {
                 if (isDragging) {
                     let dx = event.clientX - lastX;
                     let dy = event.clientY - lastY;
@@ -478,8 +481,16 @@ window.onload = function init() {
             identifySelectedVertices();
 
             redrawingCanvas()
-            lastSelectionStart = { x: selectionStart.x, y: selectionStart.y }
-            lastSelectionEnd = { x: selectionEnd.x, y: selectionEnd.y }
+
+            var xMax = Math.max(selectionStart.x, selectionEnd.x);
+            var xMin = Math.min(selectionStart.x, selectionEnd.x);
+            var yMax = Math.max(selectionStart.y, selectionEnd.y);
+            var yMin = Math.min(selectionStart.y, selectionEnd.y);
+
+            lastSelectionStartBase = { x: xMin, y: yMin }
+            lastSelectionEndBase = { x: xMax, y: yMax }
+            lastSelectionStart = { x: xMin, y: yMin }
+            lastSelectionEnd = { x: xMax, y: yMax }
             selectionStart = { x: 0, y: 0 };
             selectionEnd = { x: 0, y: 0 };
 
@@ -495,8 +506,19 @@ window.onload = function init() {
 
             x = (2 * x / canvas.width);
             y = 2 - (2 * y / canvas.height);
-            if ((x >= lastSelectionStart.x || x <= lastSelectionEnd.x) || (y <= lastSelectionStart.y || y >= lastSelectionEnd.y)) {
+
+
+            console.log("X: " + x + "Y: " + y);
+            console.log("laststart X: " + lastSelectionStart.x + "laststart Y: " + lastSelectionStart.y);
+            console.log("lastend X: " + lastSelectionEnd.x + "lastend Y: " + lastSelectionEnd.y);
+            console.log("laststartbase X: " + lastSelectionStartBase.x + "laststartbase Y: " + lastSelectionStartBase.y);
+            console.log("lastendbase X: " + lastSelectionEndBase.x + "lastendbase Y: " + lastSelectionEndBase.y);
+
+            if ((x >= lastSelectionStart.x && x <= lastSelectionEnd.x) && (y >= lastSelectionStart.y && y <= lastSelectionEnd.y)) {
+                console.log("inside");
+            } else {
                 deSelect();
+                console.log("outside");
             }
         }
         else if (brush || isErasing) {
@@ -733,10 +755,35 @@ function drawing() {
                     var currentVertex = layerVertices[currentLayer][i];
                     var currentVertex2 = layerVertices[currentLayer][i + 1];
                     var currentVertex3 = layerVertices[currentLayer][i + 2];
+
+
                     if (arraysAreEqual(currentVertex, dynamicVertices[0]) && arraysAreEqual(currentVertex2, dynamicVertices[1]) && arraysAreEqual(currentVertex3, dynamicVertices[2])) {
                         found = true;
                         foundIndex = i;
                         break;
+                    }
+
+                }
+                if (!found) {
+                    for (var i = 0; i < layerVertices[currentLayer].length; i = i + 3) {
+                        var currentVertex = layerVertices[currentLayer][i];
+                        var currentVertex2 = layerVertices[currentLayer][i + 1];
+                        var currentVertex3 = layerVertices[currentLayer][i + 2];
+
+
+                        if (arraysAreEqual(currentVertex, dynamicVertices[0]) && arraysAreEqual(currentVertex2, dynamicVertices[1]) && arraysAreEqual(currentVertex3, dynamicVertices[2])) {
+                            found = true;
+                            foundIndex = i;
+                            break;
+                        }
+                        const isInside = isPointInTriangle([x, y], currentVertex, currentVertex2, currentVertex3);
+                        if (isInside) {
+                            found = true;
+                            foundIndex = i;
+                            break;
+                        } else {
+                            console.log("The point is outside the triangle.");
+                        }
                     }
                 }
 
@@ -757,6 +804,8 @@ function drawing() {
                 } else {
                     console.log("dynamicVertices[0] not found in layerVertices[currentLayer]");
                 }
+
+
 
 
             }
@@ -781,6 +830,27 @@ function drawing() {
     }
 }
 
+// Function to check if a point (px, py) is inside a triangle defined by three points (p1, p2, p3)
+function isPointInTriangle(p, p1, p2, p3) {
+    // Calculate the area of the whole triangle
+    const totalArea = triangleArea(p1, p2, p3);
+
+    // Calculate the areas of the three sub-triangles formed by the point and the vertices
+    const area1 = triangleArea(p, p2, p3);
+    const area2 = triangleArea(p1, p, p3);
+    const area3 = triangleArea(p1, p2, p);
+
+    // Define a small epsilon value for tolerance in comparisons
+    const epsilon = 1e-10;
+
+    // If the sum of the areas of the sub-triangles is very close to the area of the whole triangle, the point is inside the triangle
+    return Math.abs(totalArea - (area1 + area2 + area3)) < epsilon;
+}
+
+// Function to calculate the area of a triangle defined by three points
+function triangleArea(p1, p2, p3) {
+    return 0.5 * Math.abs((p1[0] * (p2[1] - p3[1]) + p2[0] * (p3[1] - p1[1]) + p3[0] * (p1[1] - p2[1])));
+}
 
 function arraysAreEqual(arr1, arr2) {
     if (arr1.length !== arr2.length) {
@@ -905,6 +975,7 @@ function undo() {
 
 
 function eraser() {
+    toolChange();
     isErasing = true;
     isSelectionOn = false;
     brush = false;
@@ -1015,15 +1086,16 @@ function selectionOn() {
 
 
 function deSelect() {
-
+    isSelectedBefore = false;
     selectedVertices = [];
     layerVertices[currentLayer].splice(selectionRectVertices[0], selectionRectVertices[1]);
     layerColors[currentLayer].splice(selectionRectVertices[0], selectionRectVertices[1]);
 
     fillBuffers();
     render();
+    toolChange();
+    selectionOn();
 
-    setbrush();
 }
 
 
@@ -1142,7 +1214,7 @@ function toolChange() {
     canMove = false;
     isSelectionOn = false;
     zoomEnabled = false;
-
+    isErasing = false;
     left = 0;
     right = 2;
     bottom = 0;
@@ -1162,7 +1234,7 @@ function toolChangeNoProject() {
     canMove = false;
     isSelectionOn = false;
     zoomEnabled = false;
-
+    isErasing = false;
 
 }
 /* UI Elements Functions */
