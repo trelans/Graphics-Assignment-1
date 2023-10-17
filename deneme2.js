@@ -854,13 +854,14 @@ function pushState() {
     }
 
     // Create deep copies of the arrays
-    const clonedVertices = [];
-    const clonedColors = [];
+    let clonedVertices = [];
+    let clonedColors = [];
     const clonedIndexes = []; // Add an array for layerIndexes
+    clonedVertices = JSON.parse(JSON.stringify(layerVertices));
+    clonedColors = JSON.parse(JSON.stringify(layerColors));
+
     for (let i = 0; i < layerVertices.length; i++) {
-        clonedVertices.push([...layerVertices[i]]);
-        clonedColors.push([...layerColors[i]]);
-        clonedIndexes.push(layerIndexes[i]); // Store layerIndexes as well
+        clonedIndexes.push(layerIndexes[i]);
     }
 
     undoHistory.vertexStates.push(clonedVertices);
