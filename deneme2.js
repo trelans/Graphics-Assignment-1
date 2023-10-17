@@ -291,21 +291,7 @@ window.onload = function init() {
             // Ctrl+C was pressed
             console.log("Ctrl+C was pressed");
 
-            if (canMove) {
-
-                // Copy
-                for (var i = 0; i < selectedVertices.length - 6; i++) {
-                    var currentIndex = selectedVertices[i];
-                    console.log(currentIndex);
-                    willBeCopiedVertex.push(vec3(layerVertices[currentLayer][currentIndex][0], layerVertices[currentLayer][currentIndex][1], layerVertices[currentLayer][currentIndex][2]));
-                    willBeCopiedColor.push(vec4(layerColors[currentLayer][currentIndex][0], layerColors[currentLayer][currentIndex][1], layerColors[currentLayer][currentIndex][2], layerColors[currentLayer][currentIndex][3]));
-
-
-                }
-                console.log(layerVertices[currentLayer]);
-                console.log(willBeCopiedVertex);
-                console.log(willBeCopiedColor);
-            }
+            copy();
         }
 
     });
@@ -317,13 +303,15 @@ window.onload = function init() {
             // You can perform your paste logic here
             console.log("Ctrl+V was pressed");
 
+            copy();
+
             if (willBeCopiedVertex.length > 0) {
                 console.log(layerVertices[currentLayer]);
                 console.log(willBeCopiedVertex);
                 index = index + willBeCopiedVertex.length;
 
-                layerVertices[currentLayer].push(...willBeCopiedVertex)
-                layerColors[currentLayer].push(...willBeCopiedColor)
+                layerVertices[currentLayer].push(...willBeCopiedVertex);
+                layerColors[currentLayer].push(...willBeCopiedColor);
                 console.log(layerVertices[currentLayer]);
                 console.log(layerColors[currentLayer]);
                 fillBuffers();
@@ -548,6 +536,24 @@ window.onload = function init() {
 
     const loadButton = document.getElementById("load-button");
     loadButton.addEventListener("click", loadData);
+}
+
+function copy() {
+    if (canMove) {
+
+        // Copy
+        for (var i = 0; i < selectedVertices.length - 6; i++) {
+            var currentIndex = selectedVertices[i];
+            console.log(currentIndex);
+            willBeCopiedVertex.push(vec3(layerVertices[currentLayer][currentIndex][0], layerVertices[currentLayer][currentIndex][1], layerVertices[currentLayer][currentIndex][2]));
+            willBeCopiedColor.push(vec4(layerColors[currentLayer][currentIndex][0], layerColors[currentLayer][currentIndex][1], layerColors[currentLayer][currentIndex][2], layerColors[currentLayer][currentIndex][3]));
+
+
+        }
+        console.log(layerVertices[currentLayer]);
+        console.log(willBeCopiedVertex);
+        console.log(willBeCopiedColor);
+    }
 }
 
 function reallocateBuffers() {
@@ -1301,16 +1307,21 @@ function selectTool(element, tool) {
     element.classList.add('selectedTool');
 
     if (tool == "brush") {
+        deSelect();
         setBrush();
     } else if (tool == "eraser") {
+        deSelect();
         eraser();
     } else if (tool == "selection") {
         selectionOn();
     } else if (tool == "zoom-in") {
+        deSelect();
         zoomIn();
     } else if (tool == "zoom-out") {
+        deSelect();
         zoomOut();
     } else if (tool == "hand") {
+        deSelect();
         hand();
     }
 }
