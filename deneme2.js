@@ -135,17 +135,6 @@ window.onload = function init() {
     const u_ProjectionMatrix = gl.getUniformLocation(program, 'projectionMatrix');
     gl.uniformMatrix4fv(u_ProjectionMatrix, false, flatten(projectionMatrix));
 
-    // will delete
-    for (let m = 0; m < numRows * numColumns; m++) {
-        for (let l = 0; l < 4; l++) {
-            for (let k = 0; k < 3; k++) {
-                const color = vec4(0.0, 1.0, 1.0, 1.0);
-                vertexColors.push(color);
-            }
-        }
-    }
-
-
     for (let i = 0; i < numRows; i++) {
         for (let j = 0; j < numColumns; j++) {
             const x = j * cubeSize;
@@ -172,14 +161,11 @@ window.onload = function init() {
                 x + cubeSize, y, z
             ];
 
-            // Define a single color for each triangle
-
-
-
             vertices.push(...squareVertices);
 
         }
     }
+
     pushState(); // Save the initial state
     VBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, VBuffer);
@@ -200,8 +186,6 @@ window.onload = function init() {
 
 
     function redrawingCanvas() {
-
-
 
         // Define rectangle vertices using selectionStart and selectionEnd.
         rectVertices = [
@@ -285,6 +269,22 @@ window.onload = function init() {
 
     }
 
+    // Event listener for Ctrl+Z (undo)
+    document.addEventListener("keydown", function (event) {
+        if (event.ctrlKey && event.key === "z") {
+            // Ctrl+Z was pressed
+            undo();
+        }
+
+    });
+    // Event listener for Ctrl+Y (redo)
+    document.addEventListener("keydown", function (event) {
+        if (event.ctrlKey && event.key === "y") {
+            // Ctrl+Y was pressed
+            redo();
+        }
+
+    });
 
     // Event listener for Ctrl+C (copy)
     document.addEventListener("keydown", function (event) {
