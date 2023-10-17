@@ -17,7 +17,7 @@ let currentLayer = 0; // Initial layer (1)
 let currentLayerOffset = 0; // Initial layer offset (0)
 let currentLayerZIndex = 2; // Initial layer Z index (2)
 
-const layerIndexes = [0, 1, 2];
+let layerIndexes = [0, 1, 2];
 const layerSizes = [0, 0, 0];
 
 let layerVertices = [
@@ -51,7 +51,9 @@ var previousIndexColor = -1;
 const undoHistory = {
     vertexStates: [],
     colorStates: [],
+    layerIndexes: [],
     currentIndex: -1,
+    renderIndex: 0,
     maxHistoryLength: 30
 };
 
@@ -517,7 +519,7 @@ window.onload = function init() {
         isPainting = false;
     });
 
-    
+
 
     const saveButton = document.getElementById("save-button");
     saveButton.addEventListener("click", saveData);
@@ -818,21 +820,24 @@ function redo() {
     if (undoHistory.currentIndex < undoHistory.vertexStates.length - 1) {
         undoHistory.currentIndex++;
 
-        // Restore the next state from the undo history
-        const nextVertices = undoHistory.vertexStates[undoHistory.currentIndex];
-        const nextColors = undoHistory.colorStates[undoHistory.currentIndex];
+        // Restore the next state from the redo history with deep copy
+        const nextVertices = undoHistory.vertexStates[undoHistory.currentIndex].map(vertices => [...vertices]);
+        const nextColors = undoHistory.colorStates[undoHistory.currentIndex].map(colors => [...colors]);
+        const nextIndexes = [...undoHistory.layerIndexes[undoHistory.currentIndex]];
 
         // Update the current layer's state
-        layerVertices = nextVertices.slice();
-        layerColors = nextColors.slice();
+        layerVertices = nextVertices;
+        layerColors = nextColors;
+        layerIndexes = nextIndexes;
+        index = undoHistory.renderIndex;
 
         console.log(layerVertices);
 
         fillBuffers();
         render();
+        updateLayerOrder(layerIndexes);
     }
 }
-
 
 
 // Function to save the current state to the undo history
@@ -844,24 +849,30 @@ function pushState() {
         // Remove redo history when a new action is performed
         undoHistory.vertexStates.splice(undoHistory.currentIndex + 1);
         undoHistory.colorStates.splice(undoHistory.currentIndex + 1);
+        undoHistory.layerIndexes.splice(undoHistory.currentIndex + 1);
         console.log(undoHistory.vertexStates);
     }
 
     // Create deep copies of the arrays
     const clonedVertices = [];
     const clonedColors = [];
+    const clonedIndexes = []; // Add an array for layerIndexes
     for (let i = 0; i < layerVertices.length; i++) {
         clonedVertices.push([...layerVertices[i]]);
         clonedColors.push([...layerColors[i]]);
+        clonedIndexes.push(layerIndexes[i]); // Store layerIndexes as well
     }
 
     undoHistory.vertexStates.push(clonedVertices);
     undoHistory.colorStates.push(clonedColors);
+    undoHistory.layerIndexes.push(clonedIndexes);
+    undoHistory.renderIndex = index;
 
     if (undoHistory.vertexStates.length > undoHistory.maxHistoryLength) {
         // Remove the oldest state if the history exceeds the limit
         undoHistory.vertexStates.shift();
         undoHistory.colorStates.shift();
+        undoHistory.layerIndexes.shift();
     }
 
     undoHistory.currentIndex = undoHistory.vertexStates.length - 1;
@@ -875,19 +886,26 @@ function undo() {
         undoHistory.currentIndex--;
 
         // Restore the previous state from the undo history
-        const previousVertices = undoHistory.vertexStates[undoHistory.currentIndex];
-        const previousColors = undoHistory.colorStates[undoHistory.currentIndex];
+        const previousVertices = undoHistory.vertexStates[undoHistory.currentIndex].map(v => [...v]);
+        const previousColors = undoHistory.colorStates[undoHistory.currentIndex].map(c => [...c]);
+        const previousIndexes = [...undoHistory.layerIndexes[undoHistory.currentIndex]];
 
+
+        console.log(previousVertices);
+        console.log(undoHistory.currentIndex);
         // Update the current layer's state
-        layerVertices = previousVertices.slice();
-        layerColors = previousColors.slice();
-
+        layerVertices = previousVertices;
+        layerColors = previousColors;
+        layerIndexes = previousIndexes;
+        index = undoHistory.renderIndex;
 
         console.log(undoHistory.vertexStates);
         fillBuffers();
         render();
+        updateLayerOrder(layerIndexes);
     }
 }
+
 
 function eraser() {
     isErasing = true;
@@ -907,6 +925,7 @@ function saveDataToFile() {
     const saveData = {
         vertices: layerVertices,
         vertexColors: layerColors,
+        index: index,
     };
 
     const jsonSaveData = JSON.stringify(saveData);
@@ -940,18 +959,24 @@ function loadFileData(inputFile) {
         reader.onload = function (event) {
             const jsonSaveData = event.target.result;
             const saveData = JSON.parse(jsonSaveData);
+            console.log(saveData);
 
             // Update the arrays with the loaded data
             layerVertices = [...saveData.vertices];
             layerColors = [...saveData.vertexColors];
+            index = saveData.index;
+            console.log(layerVertices);
+            console.log(layerColors);
+            console.log(index);
+            // Update WebGL buffers with the loaded data
+            fillBuffers();
+
+            render(); // Redraw the canvas with the loaded data
 
         };
 
         reader.readAsText(file);
-        // Update WebGL buffers with the loaded data
-        fillBuffers();
 
-        render(); // Redraw the canvas with the loaded data
     }
     console.log("loadFileData");
     console.log(layerVertices);
@@ -1060,6 +1085,7 @@ function increaseLayer(layer) {
         if (currentLayer == layer) {
             selectLayer(layer);
         }
+        pushState();
         fillBuffers();
         render();
     }
@@ -1078,6 +1104,7 @@ function decreaseLayer(layer) {
         if (currentLayer == layer) {
             selectLayer(layer);
         }
+        pushState();
         fillBuffers();
         render();
     }
@@ -1217,4 +1244,29 @@ function selectTool(element, tool) {
     } else if (tool == "hand") {
         hand();
     }
+}
+
+function updateLayerOrder(newLayerIndexes) {
+    // Create an array to hold the layers in the desired order
+    const layers = [];
+
+    // Map the layer elements to the layers array based on their new order
+    newLayerIndexes.forEach(index => {
+        const layerId = `layer${index}`;
+        const layerElement = document.getElementById(layerId);
+        layers.push(layerElement);
+    });
+
+    // Get the parent element that holds the layers
+    const layersContainer = document.querySelector('.layer-list');
+
+    // Remove all layers from the container
+    while (layersContainer.firstChild) {
+        layersContainer.removeChild(layersContainer.firstChild);
+    }
+
+    // Add the layers back to the container in the new order
+    layers.forEach(layerElement => {
+        layersContainer.appendChild(layerElement);
+    });
 }
