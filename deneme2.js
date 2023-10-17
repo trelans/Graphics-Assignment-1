@@ -52,6 +52,7 @@ const undoHistory = {
     vertexStates: [],
     colorStates: [],
     layerIndexes: [],
+    selectionRectVertices: [],
     currentIndex: -1,
     renderIndex: 0,
     maxHistoryLength: 30
@@ -171,7 +172,7 @@ window.onload = function init() {
     pushState(); // Save the initial state
     VBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, VBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, numColumns * numRows * 3 * 16 * layerVertices.length, gl.STATIC_DRAW);
+    gl.bufferData(gl.ARRAY_BUFFER, numColumns * numRows * 3 * 16 * layerVertices.length * 3, gl.STATIC_DRAW);
 
     VPosition = gl.getAttribLocation(program, "position");
     gl.vertexAttribPointer(VPosition, 3, gl.FLOAT, false, 0, 0);
@@ -180,7 +181,7 @@ window.onload = function init() {
 
     cBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, cBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, numColumns * numRows * 4 * 32 * layerColors.length, gl.STATIC_DRAW);
+    gl.bufferData(gl.ARRAY_BUFFER, numColumns * numRows * 4 * 32 * layerColors.length * 3, gl.STATIC_DRAW);
 
     vColor = gl.getAttribLocation(program, "vColor");
     gl.vertexAttribPointer(vColor, 4, gl.FLOAT, false, 0, 0);
@@ -273,6 +274,8 @@ window.onload = function init() {
         if (event.ctrlKey && event.key === "z") {
             // Ctrl+Z was pressed
             undo();
+            console.log(selectionRectVertices);
+         
         }
 
     });
@@ -286,7 +289,7 @@ window.onload = function init() {
     });
 
     // Event listener for Ctrl+C (copy)
-    document.addEventListener("keydown", function (event) {
+    document.addEventListener("keyup", function (event) {
         if (event.ctrlKey && event.key === "c") {
             // Ctrl+C was pressed
             console.log("Ctrl+C was pressed");
@@ -297,7 +300,7 @@ window.onload = function init() {
     });
 
     // Event listener for Ctrl+V (paste)
-    document.addEventListener("keydown", function (event) {
+    document.addEventListener("keyup", function (event) {
         if (event.ctrlKey && event.key === "v") {
             // Ctrl+V was pressed
             // You can perform your paste logic here
@@ -316,6 +319,7 @@ window.onload = function init() {
                 console.log(layerColors[currentLayer]);
                 fillBuffers();
                 render();
+                pushState()
             }
 
         }
@@ -894,18 +898,21 @@ function redo() {
         const nextVertices = undoHistory.vertexStates[undoHistory.currentIndex].map(vertices => [...vertices]);
         const nextColors = undoHistory.colorStates[undoHistory.currentIndex].map(colors => [...colors]);
         const nextIndexes = [...undoHistory.layerIndexes[undoHistory.currentIndex]];
+        const nextSelectionRectVertices = [...undoHistory.selectionRectVertices[undoHistory.currentIndex]];
 
         // Update the current layer's state
         layerVertices = nextVertices;
         layerColors = nextColors;
         layerIndexes = nextIndexes;
         index = undoHistory.renderIndex;
+        selectionRectVertices = nextSelectionRectVertices;
 
         console.log(layerVertices);
 
         fillBuffers();
         render();
         updateLayerOrder(layerIndexes);
+        deSelect2();
     }
 }
 
@@ -921,6 +928,7 @@ function pushState() {
         undoHistory.vertexStates.splice(undoHistory.currentIndex + 1);
         undoHistory.colorStates.splice(undoHistory.currentIndex + 1);
         undoHistory.layerIndexes.splice(undoHistory.currentIndex + 1);
+        undoHistory.selectionRectVertices.splice(undoHistory.currentIndex + 1);
         console.log(undoHistory.vertexStates);
     }
 
@@ -928,8 +936,11 @@ function pushState() {
     let clonedVertices = [];
     let clonedColors = [];
     const clonedIndexes = []; // Add an array for layerIndexes
+    let clonedSelectionRectVertices = [];
     clonedVertices = JSON.parse(JSON.stringify(layerVertices));
     clonedColors = JSON.parse(JSON.stringify(layerColors));
+    clonedSelectionRectVertices = JSON.parse(JSON.stringify(selectionRectVertices));
+
 
     for (let i = 0; i < layerVertices.length; i++) {
         clonedIndexes.push(layerIndexes[i]);
@@ -938,6 +949,7 @@ function pushState() {
     undoHistory.vertexStates.push(clonedVertices);
     undoHistory.colorStates.push(clonedColors);
     undoHistory.layerIndexes.push(clonedIndexes);
+    undoHistory.selectionRectVertices.push(clonedSelectionRectVertices);
     undoHistory.renderIndex = index;
 
     if (undoHistory.vertexStates.length > undoHistory.maxHistoryLength) {
@@ -945,6 +957,7 @@ function pushState() {
         undoHistory.vertexStates.shift();
         undoHistory.colorStates.shift();
         undoHistory.layerIndexes.shift();
+        undoHistory.selectionRectVertices.shift();
     }
 
     undoHistory.currentIndex = undoHistory.vertexStates.length - 1;
@@ -961,6 +974,7 @@ function undo() {
         const previousVertices = undoHistory.vertexStates[undoHistory.currentIndex].map(v => [...v]);
         const previousColors = undoHistory.colorStates[undoHistory.currentIndex].map(c => [...c]);
         const previousIndexes = [...undoHistory.layerIndexes[undoHistory.currentIndex]];
+        const previousSelectionRectVertices = [...undoHistory.selectionRectVertices[undoHistory.currentIndex]];
 
 
         console.log(previousVertices);
@@ -970,11 +984,14 @@ function undo() {
         layerColors = previousColors;
         layerIndexes = previousIndexes;
         index = undoHistory.renderIndex;
+        selectionRectVertices = previousSelectionRectVertices;
 
         console.log(undoHistory.vertexStates);
         fillBuffers();
         render();
         updateLayerOrder(layerIndexes);
+        deSelect2();
+
     }
 }
 
@@ -1102,7 +1119,16 @@ function deSelect() {
     selectionOn();
 
 }
+function deSelect2() {
+    isSelectedBefore = false;
+    selectedVertices = [];
+    layerVertices[currentLayer].splice(selectionRectVertices[0], selectionRectVertices[1]);
+    layerColors[currentLayer].splice(selectionRectVertices[0], selectionRectVertices[1]);
 
+    fillBuffers();
+    render();
+
+}
 
 function generateSelectedArray(inputArray) {
     // Initialize an empty result array
